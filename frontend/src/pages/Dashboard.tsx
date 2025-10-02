@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectsApi, companiesApi, rateSheetsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import CampaignWizard from '../components/CampaignWizard';
 import type { Project, ProjectCreate, Company, RateSheet } from '../types';
 
 export default function Dashboard() {
@@ -135,6 +136,18 @@ export default function Dashboard() {
             >
               Client Management
             </button>
+            <button
+              onClick={() => navigate('/template-configurator')}
+              className="w-full text-left px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold transition-colors"
+            >
+              Template Configurator
+            </button>
+            <button
+              onClick={() => navigate('/size-settings')}
+              className="w-full text-left px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold transition-colors"
+            >
+              Size Settings
+            </button>
           </nav>
         </div>
 
@@ -189,44 +202,129 @@ export default function Dashboard() {
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description}</p>
                 )}
 
-                <div className="space-y-2 text-sm">
-                  {project.company_id && companiesMap.get(project.company_id) && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Company:</span>
-                      <span className="font-semibold">{companiesMap.get(project.company_id)!.name}</span>
-                    </div>
-                  )}
-                  {project.rate_sheet_id && rateSheetsMap.get(project.rate_sheet_id) && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Rate Sheet:</span>
-                      <span className="font-semibold">{rateSheetsMap.get(project.rate_sheet_id)!.name}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Size:</span>
-                    <span className="font-semibold">{project.size.toUpperCase()}</span>
+                {/* Campaign-specific display */}
+                {project.work_type === 'CAMPAIGN' ? (
+                  <div className="space-y-2 text-sm">
+                    {project.client_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Client:</span>
+                        <span className="font-semibold">{project.client_name}</span>
+                      </div>
+                    )}
+                    {project.campaign_duration_months && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Duration:</span>
+                        <span className="font-semibold">{project.campaign_duration_months} months</span>
+                      </div>
+                    )}
+                    {project.campaign_service_level && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Service Level:</span>
+                        <span className="font-semibold capitalize">
+                          {project.campaign_service_level.toLowerCase()}
+                        </span>
+                      </div>
+                    )}
+                    {project.campaign_site_count && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Sites:</span>
+                        <span className="font-semibold">{project.campaign_site_count}</span>
+                      </div>
+                    )}
+                    {project.campaign_response_requirement && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Response Time:</span>
+                        <span className="font-semibold">
+                          {project.campaign_response_requirement.replace('_', ' ')}
+                        </span>
+                      </div>
+                    )}
+                    {project.campaign_pricing_model && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pricing:</span>
+                        <span className="font-semibold capitalize">
+                          {project.campaign_pricing_model.replace('_', ' ').toLowerCase()}
+                        </span>
+                      </div>
+                    )}
+                    {project.total_hours && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Hours:</span>
+                        <span className="font-semibold">{project.total_hours.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {project.total_cost && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Total Cost:</span>
+                        <span className="font-semibold">${project.total_cost.toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
-                  {project.total_hours && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Hours:</span>
-                      <span className="font-semibold">{project.total_hours.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {project.duration_weeks && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-semibold">{project.duration_weeks} weeks</span>
-                    </div>
-                  )}
-                  {project.confidence_level && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Confidence:</span>
-                      <span className="font-semibold capitalize">
-                        {project.confidence_level.replace('_', ' ')}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  /* Discrete project display */
+                  <div className="space-y-2 text-sm">
+                    {project.client_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Client:</span>
+                        <span className="font-semibold">{project.client_name}</span>
+                      </div>
+                    )}
+                    {project.project_type && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Project Type:</span>
+                        <span className="font-semibold capitalize">
+                          {project.project_type.replace('_', ' ')}
+                        </span>
+                      </div>
+                    )}
+                    {project.size && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Size:</span>
+                        <span className="font-semibold capitalize">{project.size.toLowerCase()}</span>
+                      </div>
+                    )}
+                    {project.process_type && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Process:</span>
+                        <span className="font-semibold capitalize">
+                          {project.process_type.replace('_', '-')}
+                        </span>
+                      </div>
+                    )}
+                    {project.rate_sheet_id && rateSheetsMap.get(project.rate_sheet_id) && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Rate Sheet:</span>
+                        <span className="font-semibold">{rateSheetsMap.get(project.rate_sheet_id)!.name}</span>
+                      </div>
+                    )}
+                    {project.total_hours && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Hours:</span>
+                        <span className="font-semibold">{project.total_hours.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {project.duration_weeks && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Duration:</span>
+                        <span className="font-semibold">{project.duration_weeks} weeks</span>
+                      </div>
+                    )}
+                    {project.total_cost && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Cost:</span>
+                        <span className="font-semibold">${project.total_cost.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {project.confidence_level && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Confidence:</span>
+                        <span className="font-semibold capitalize">
+                          {project.confidence_level.replace('_', ' ')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-4 pt-4 border-t text-xs text-gray-500">
                   Created {new Date(project.created_at).toLocaleDateString()}
@@ -255,6 +353,9 @@ interface CreateProjectModalProps {
 }
 
 function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
+  const [workTypeStep, setWorkTypeStep] = useState(true); // Step 1: Choose work type
+  const [selectedWorkType, setSelectedWorkType] = useState<'DISCRETE_PROJECT' | 'CAMPAIGN' | null>(null);
+
   const [formData, setFormData] = useState<ProjectCreate>({
     name: '',
     project_code: '',
@@ -266,6 +367,7 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
     client_name: '',
     contingency_percent: 15,
     selected_disciplines: [],
+    work_type: 'DISCRETE_PROJECT',
   });
   const [companies, setCompanies] = useState<Company[]>([]);
   const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
@@ -315,10 +417,98 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
     onCreate(formData);
   };
 
+  const selectWorkType = (type: 'DISCRETE_PROJECT' | 'CAMPAIGN') => {
+    setSelectedWorkType(type);
+    setFormData({ ...formData, work_type: type });
+    setWorkTypeStep(false);
+  };
+
+  // Show Campaign Wizard for campaigns
+  if (!workTypeStep && selectedWorkType === 'CAMPAIGN') {
+    return (
+      <CampaignWizard
+        onClose={onClose}
+        onCreate={onCreate}
+        onBack={() => setWorkTypeStep(true)}
+      />
+    );
+  }
+
+  // Work Type Selection Step
+  if (workTypeStep) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-3xl w-full mx-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">What type of work are you estimating?</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* Discrete Project Option */}
+            <button
+              onClick={() => selectWorkType('DISCRETE_PROJECT')}
+              className="p-8 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
+            >
+              <div className="text-5xl mb-4">📊</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600">
+                Discrete Project
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                One-time project with defined scope, milestones, and deliverables
+              </p>
+              <ul className="text-sm text-gray-500 space-y-2">
+                <li>• Fixed scope and timeline</li>
+                <li>• Milestone-based planning</li>
+                <li>• Deliverable-focused</li>
+                <li>• Budget tied to project completion</li>
+              </ul>
+            </button>
+
+            {/* Campaign Option */}
+            <button
+              onClick={() => selectWorkType('CAMPAIGN')}
+              className="p-8 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group text-left"
+            >
+              <div className="text-5xl mb-4">🔄</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600">
+                Engineering Support Campaign
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Ongoing support with allocated capacity and recurring deliverables
+              </p>
+              <ul className="text-sm text-gray-500 space-y-2">
+                <li>• Duration-based (monthly/annual)</li>
+                <li>• Capacity allocation model</li>
+                <li>• Mix of reactive & scheduled work</li>
+                <li>• Monthly burn rate pricing</li>
+              </ul>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Project</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Create New {selectedWorkType === 'CAMPAIGN' ? 'Campaign' : 'Project'}
+          </h2>
+          <button
+            onClick={() => setWorkTypeStep(true)}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            ← Change Work Type
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>

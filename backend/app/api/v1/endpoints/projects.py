@@ -10,12 +10,63 @@ from decimal import Decimal
 from app.core.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.models.project import ProjectStatus, ProjectType
+from app.models.project import ProjectStatus, ProjectType, WorkType, ProcessType
 from app.crud.project import project_crud
+from app.crud.project_size_settings import project_size_settings
 from app.schemas.project import Project, ProjectCreate, ProjectUpdate, ProjectListResponse
 
 
 router = APIRouter()
+
+
+async def apply_phase_gate_recommendation(
+    db: AsyncSession,
+    project_data: dict,
+    total_hours: Optional[int] = None
+) -> dict:
+    """
+    Apply phase-gate recommendation logic based on project size settings.
+
+    Args:
+        db: Database session
+        project_data: Project data dictionary
+        total_hours: Total project hours (if available)
+
+    Returns:
+        Updated project data with phase-gate recommendation
+    """
+    # Only apply to discrete projects
+    if project_data.get('work_type') != WorkType.DISCRETE_PROJECT:
+        return project_data
+
+    # Get active size settings
+    settings = await project_size_settings.get_active_settings(db)
+    if not settings:
+        return project_data
+
+    # Use provided total_hours or get from project_data
+    hours = total_hours or project_data.get('total_hours', 0)
+
+    if hours and settings.should_recommend_phase_gate(hours):
+        # Only set recommendation if not already manually set
+        if not project_data.get('process_type_overridden', False):
+            project_data['process_type_recommended'] = ProcessType.PHASE_GATE
+            # If no process type is set, use the recommendation
+            if not project_data.get('process_type'):
+                project_data['process_type'] = ProcessType.PHASE_GATE
+        else:
+            # Still set the recommendation, but don't override user choice
+            project_data['process_type_recommended'] = ProcessType.PHASE_GATE
+    else:
+        # Recommend conventional process
+        if not project_data.get('process_type_overridden', False):
+            project_data['process_type_recommended'] = ProcessType.CONVENTIONAL
+            if not project_data.get('process_type'):
+                project_data['process_type'] = ProcessType.CONVENTIONAL
+        else:
+            project_data['process_type_recommended'] = ProcessType.CONVENTIONAL
+
+    return project_data
 
 
 @router.post("/", response_model=Project, status_code=status.HTTP_201_CREATED)
@@ -49,6 +100,10 @@ async def create_project(
     from app.models.project import Project as ProjectModel
 
     project_data = project_in.model_dump()
+
+    # Apply phase-gate recommendation logic
+    project_data = await apply_phase_gate_recommendation(db, project_data)
+
     db_project = ProjectModel(**project_data, created_by=current_user.id)
     db.add(db_project)
     await db.commit()
@@ -143,6 +198,19 @@ async def update_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found"
         )
+
+    # Apply phase-gate recommendation logic if total_hours is being updated
+    update_data = project_in.model_dump(exclude_unset=True)
+    if 'total_hours' in update_data or 'work_type' in update_data:
+        # Get current total_hours if not in update
+        total_hours = update_data.get('total_hours', project.total_hours)
+        # Merge current project data with updates
+        merged_data = {**project.__dict__, **update_data}
+        merged_data = await apply_phase_gate_recommendation(db, merged_data, total_hours)
+        # Update only the recommendation fields
+        update_data['process_type_recommended'] = merged_data.get('process_type_recommended')
+        if not update_data.get('process_type_overridden', project.process_type_overridden):
+            update_data['process_type'] = merged_data.get('process_type')
 
     project = await project_crud.update(db, db_obj=project, obj_in=project_in)
 

@@ -3,10 +3,13 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
 import ProjectEstimation from './pages/ProjectEstimation';
+import CampaignDetail from './pages/CampaignDetail';
 import ClientManagement from './pages/ClientManagement';
 import Industries from './pages/Industries';
 import Companies from './pages/Companies';
 import RateSheets from './pages/RateSheets';
+import TemplateConfigurator from './pages/TemplateConfigurator';
+import SizeSettings from './pages/SizeSettings';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -30,6 +33,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProjectEstimation />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/campaign/:id"
+            element={
+              <ProtectedRoute>
+                <CampaignDetail />
               </ProtectedRoute>
             }
           />
@@ -70,6 +81,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <RateSheets />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/template-configurator"
+            element={
+              <ProtectedRoute>
+                <TemplateConfigurator />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/size-settings"
+            element={
+              <ProtectedRoute>
+                <SizeSettings />
               </ProtectedRoute>
             }
           />

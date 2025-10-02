@@ -58,16 +58,17 @@ async def create_deliverable_template(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new deliverable template."""
-    # Verify company exists
-    company = await company_crud.get(db, template_in.company_id)
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found"
-        )
+    # Verify company exists if company_id is provided
+    if template_in.company_id:
+        company = await company_crud.get(db, template_in.company_id)
+        if not company:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Company not found"
+            )
 
     # If setting as default, unset other defaults for this company/size combo
-    if template_in.is_default:
+    if template_in.is_default and template_in.company_id:
         await template_crud.unset_defaults(
             db,
             company_id=template_in.company_id,

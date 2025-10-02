@@ -10,12 +10,12 @@ from app.models.base import Base
 
 
 class DeliverableTemplate(Base):
-    """Deliverable template for client profile by project size."""
+    """Deliverable template by project size - can be generic or company-specific."""
 
     __tablename__ = "deliverable_templates"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False, index=True)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True, index=True)  # Optional - null = generic template
 
     # Template identification
     name = Column(String(255), nullable=False)  # e.g., "Shell - Large Project Matrix"

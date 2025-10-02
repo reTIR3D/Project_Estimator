@@ -55,6 +55,12 @@ export default function ProjectEstimation() {
   useEffect(() => {
     if (id) {
       projectsApi.get(id).then((data) => {
+        // Redirect campaigns to campaign management page
+        if (data.work_type === 'CAMPAIGN') {
+          navigate(`/campaign/${id}`);
+          return;
+        }
+
         setProject(data);
         setProjectSize(data.size);
         setClientProfile(data.client_profile);
@@ -65,7 +71,7 @@ export default function ProjectEstimation() {
         setLastSaved(data.updated_at ? new Date(data.updated_at) : null);
       });
     }
-  }, [id]);
+  }, [id, navigate]);
 
   // Track changes to mark as unsaved
   useEffect(() => {

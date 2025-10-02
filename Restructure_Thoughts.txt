@@ -1,0 +1,173 @@
+markdown# Project Estimation Tool - Restructure Request
+
+## Current Issue
+The tool currently treats all work as discrete projects with size categories (Small/Medium/Large) and an option for "Phase Gate" projects. This structure doesn't accommodate ongoing engineering support campaigns and conflates project size with governance methodology.
+
+## Proposed Structure
+
+### 1. Top-Level Work Type Selection (First Wizard Step)
+What type of work are you estimating?
+├── Discrete Project
+│   └── [proceeds to project-specific wizard]
+└── Engineering Support Campaign
+└── [proceeds to campaign-specific wizard]
+
+### 2. Discrete Project Path
+
+#### Step 1: Project Size
+- Small: [define hour threshold, e.g., <500 hours]
+- Medium: [define hour threshold, e.g., 500-2000 hours]
+- Large: [define hour threshold, e.g., >2000 hours]
+
+#### Step 2: Process/Governance Type
+- **Conventional**: Standard workflow with continuous progression
+- **Phase Gate**: Formal stage-gate reviews with approval milestones
+  - Recommended for: Large projects, high-risk work, regulatory requirements
+  - User can override recommendation
+
+#### What This Affects:
+- **Conventional Projects**: 
+  - Simple milestone structure
+  - Continuous workflow
+  - Standard deliverable templates
+  
+- **Phase Gate Projects**:
+  - Auto-generate gate review milestones (Concept, Define, Design, Execute, Close)
+  - Approval deliverables at each gate
+  - Decision point templates
+  - Stage-specific resource loading
+  - Additional PM overhead for gate preparation/reviews
+
+### 3. Engineering Support Campaign Path
+
+#### Step 1: Campaign Duration
+- 6 months
+- 1 year
+- 2 years
+- Ongoing (annual renewal)
+
+#### Step 2: Service Level/Scope
+- **Reactive Support Only**: As-needed response to site issues
+- **Scheduled + Reactive**: Regular deliverables (monthly reports, quarterly reviews) plus on-demand support
+- **Full Service**: Proactive monitoring + scheduled deliverables + reactive support
+
+#### Step 3: Campaign Parameters
+- Number of sites covered
+- Geographic considerations (if relevant)
+- Response time requirements (24-hour, 48-hour, weekly)
+- Disciplines required (structural, mechanical, electrical, etc.)
+- Hours per month per discipline
+
+#### What This Affects:
+- **Cost Structure**: Monthly burn rate, not milestone-based
+- **Resource Model**: Allocated capacity (FTE or hours/month) rather than task-based
+- **Deliverables**: Mix of scheduled and reactive, capacity-based rather than scope-based
+- **Output Format**: 
+  - Monthly cost by discipline
+  - Annual total value
+  - Capacity allocation summary
+  - Quarterly business review schedule
+
+### 4. Data Model Changes Needed
+
+**Current (assumed):**
+```javascript
+project = {
+  type: "small" | "medium" | "large" | "phaseGate",
+  // ... other fields
+}
+Proposed:
+javascript// Base fields
+work = {
+  workType: "discreteProject" | "campaign",
+  // ... common fields like name, client, etc.
+}
+
+// If discreteProject
+discreteProject = {
+  ...work,
+  size: "small" | "medium" | "large",
+  processType: "conventional" | "phaseGate",
+  processTypeRecommendation: "conventional" | "phaseGate", // what system suggested
+  processTypeOverridden: boolean, // did user override recommendation?
+  // ... milestone-based planning fields
+}
+
+// If campaign
+campaign = {
+  ...work,
+  duration: number, // in months
+  renewalType: "fixed" | "annual" | "ongoing",
+  serviceLevel: "reactiveOnly" | "scheduledReactive" | "fullService",
+  siteCount: number,
+  responseRequirement: "24hour" | "48hour" | "weekly",
+  disciplines: [{
+    name: string,
+    hoursPerMonth: number,
+    rate: number
+  }],
+  scheduledDeliverables: [{
+    name: string,
+    frequency: "monthly" | "quarterly" | "annual"
+  }],
+  // ... capacity-based planning fields
+}
+5. UI/UX Considerations
+Wizard Step Indicators:
+
+Discrete Project: "Type → Size → Process → [project details]"
+Campaign: "Type → Duration → Service Level → [campaign details]"
+
+Estimation Output Differences:
+
+Discrete Project: Total cost, phase breakdown, milestone schedule, Gantt view
+Campaign: Monthly cost, annual total, capacity allocation table, deliverable frequency matrix
+
+Reporting/Analytics Benefits:
+
+Can analyze "all large projects regardless of process type"
+Can analyze "all phase gate projects regardless of size"
+Can track campaign vs project profitability separately
+Can forecast revenue mix (project-based vs recurring)
+
+6. Implementation Priority
+Phase 1 (Critical):
+
+Add top-level work type selection
+Separate project size from process type in discrete projects
+Create basic campaign estimation flow
+
+Phase 2 (Enhancement):
+
+Smart recommendations for phase gate based on size/complexity
+Campaign-specific templates and deliverable libraries
+Reporting dashboard separating project vs campaign metrics
+
+7. Migration Considerations
+For existing estimates in the system:
+
+Default all existing to workType: "discreteProject"
+Map current project types:
+
+"small"/"medium"/"large" → size, processType: "conventional"
+"phaseGate" → size: "large", processType: "phaseGate"
+
+
+
+Questions to Resolve
+
+What hour thresholds define Small/Medium/Large?
+Are there other governance types beyond Conventional/Phase Gate? (e.g., Agile, Design-Build)
+Are campaigns typically fixed-fee retainers or time-and-materials with caps?
+Do you need to track individual site-level details within campaigns?
+Should campaigns have their own milestone/review structure (e.g., quarterly business reviews)?
+
+Request for Claude Code
+Please review the current project estimation tool structure and refactor to implement this two-path approach:
+
+Separate discrete projects from ongoing campaigns at the top level
+For discrete projects, decouple size from governance/process type
+Create a campaign-specific estimation flow focused on capacity allocation rather than deliverable-based planning
+Update data models, wizard flows, and output templates accordingly
+
+Focus on making the structure extensible for future work types while keeping the user experience clear and guided.

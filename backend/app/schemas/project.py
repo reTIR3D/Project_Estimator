@@ -8,7 +8,9 @@ from pydantic import Field
 
 from app.schemas.base import BaseSchema, BaseDBSchema
 from app.models.project import (
+    WorkType,
     ProjectSize,
+    ProcessType,
     EngineeringDiscipline,
     ClientProfile,
     ProjectStatus,
@@ -21,10 +23,20 @@ from app.models.project import (
 class ProjectBase(BaseSchema):
     """Base project schema."""
 
+    # Work type
+    work_type: WorkType = Field(default=WorkType.DISCRETE_PROJECT)
+
+    # Basic information
     name: str = Field(..., min_length=1, max_length=255)
     project_code: Optional[str] = Field(None, max_length=50)
     description: Optional[str] = Field(None, max_length=2000)
-    size: ProjectSize
+
+    # Discrete project fields (optional for campaigns)
+    size: Optional[ProjectSize] = None
+    process_type: Optional[ProcessType] = None
+    process_type_recommended: Optional[ProcessType] = None
+    process_type_overridden: Optional[bool] = False
+
     discipline: EngineeringDiscipline
     project_type: ProjectType = Field(default=ProjectType.STANDARD)
     parent_project_id: Optional[UUID] = None
@@ -36,9 +48,21 @@ class ProjectBase(BaseSchema):
     resource_availability: dict = Field(default_factory=dict)
     contingency_percent: float = Field(default=15.0, ge=0, le=100)
     overhead_percent: float = Field(default=10.0, ge=0, le=100)
+
+    # Phase-gate fields (for discrete projects with PHASE_GATE process)
     current_phase: Optional[ProjectPhase] = None
     phase_completion: dict = Field(default_factory=dict)
     gate_approvals: dict = Field(default_factory=dict)
+
+    # Campaign-specific fields
+    campaign_duration_months: Optional[int] = None
+    campaign_service_level: Optional[str] = None
+    campaign_site_count: Optional[int] = None
+    campaign_response_requirement: Optional[str] = None
+    campaign_monthly_hours: Optional[dict] = Field(default_factory=dict)
+    campaign_scheduled_deliverables: Optional[list] = Field(default_factory=list)
+    campaign_pricing_model: Optional[str] = None
+
     selected_disciplines: list[str] = Field(default_factory=list)
 
 

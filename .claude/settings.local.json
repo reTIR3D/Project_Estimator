@@ -27,7 +27,8 @@
       "Bash(curl:*)",
       "Bash(./start.bat)",
       "Bash(tasklist)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

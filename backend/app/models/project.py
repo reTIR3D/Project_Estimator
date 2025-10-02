@@ -1,20 +1,33 @@
 """Project model."""
 
 import enum
-from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, JSON, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, JSON, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
 
 
-class ProjectSize(str, enum.Enum):
-    """Project size classification."""
+class WorkType(str, enum.Enum):
+    """Top-level work type classification."""
 
-    SMALL = "SMALL"      # < 500 hours
-    MEDIUM = "MEDIUM"    # 500-2000 hours
-    LARGE = "LARGE"      # > 2000 hours
-    PHASE_GATE = "PHASE_GATE"  # Large/complex project with staged phases
+    DISCRETE_PROJECT = "DISCRETE_PROJECT"  # One-time project with defined scope
+    CAMPAIGN = "CAMPAIGN"  # Ongoing engineering support/retainer
+
+
+class ProjectSize(str, enum.Enum):
+    """Project size classification (for discrete projects only)."""
+
+    SMALL = "SMALL"      # < 500 hours (configurable)
+    MEDIUM = "MEDIUM"    # 500-2000 hours (configurable)
+    LARGE = "LARGE"      # > 2000 hours (configurable)
+
+
+class ProcessType(str, enum.Enum):
+    """Project governance/process methodology."""
+
+    CONVENTIONAL = "CONVENTIONAL"  # Standard workflow with continuous progression
+    PHASE_GATE = "PHASE_GATE"  # Formal stage-gate reviews with approval milestones
 
 
 class EngineeringDiscipline(str, enum.Enum):
@@ -80,11 +93,20 @@ class Project(Base):
 
     __tablename__ = "projects"
 
+    # Work type classification
+    work_type = Column(Enum(WorkType), default=WorkType.DISCRETE_PROJECT, nullable=False, index=True)
+
     # Basic information
     name = Column(String(255), nullable=False, index=True)
     project_code = Column(String(50), unique=True, index=True)
     description = Column(String(2000))
-    size = Column(Enum(ProjectSize), nullable=False)
+
+    # Discrete project fields (nullable for campaigns)
+    size = Column(Enum(ProjectSize), nullable=True)  # Only for discrete projects
+    process_type = Column(Enum(ProcessType), nullable=True)  # Only for discrete projects
+    process_type_recommended = Column(Enum(ProcessType), nullable=True)  # What system suggested
+    process_type_overridden = Column(Boolean, default=False)  # Did user override recommendation?
+
     discipline = Column(Enum(EngineeringDiscipline), nullable=False)
     project_type = Column(Enum(ProjectType), default=ProjectType.STANDARD, nullable=False)
 
@@ -100,10 +122,19 @@ class Project(Base):
     # Status and workflow
     status = Column(Enum(ProjectStatus), default=ProjectStatus.DRAFT, index=True)
 
-    # Phase-gate tracking (for PHASE_GATE project type)
-    current_phase = Column(Enum(ProjectPhase), nullable=True)  # Current phase for phase-gate projects
+    # Phase-gate tracking (for process_type = PHASE_GATE)
+    current_phase = Column(Enum(ProjectPhase), nullable=True)  # Current phase for phase-gate process
     phase_completion = Column(JSON, default={})  # Track completion % per phase
     gate_approvals = Column(JSON, default={})    # Track gate approval dates and approvers
+
+    # Campaign-specific fields (for work_type = CAMPAIGN)
+    campaign_duration_months = Column(Integer, nullable=True)  # Duration in months
+    campaign_service_level = Column(String(50), nullable=True)  # reactiveOnly, scheduledReactive, fullService
+    campaign_site_count = Column(Integer, nullable=True)  # Number of sites covered
+    campaign_response_requirement = Column(String(50), nullable=True)  # 24hour, 48hour, weekly
+    campaign_monthly_hours = Column(JSON, default={})  # {discipline: hours_per_month}
+    campaign_scheduled_deliverables = Column(JSON, default=[])  # [{name, frequency}]
+    campaign_pricing_model = Column(String(50), nullable=True)  # fixedRetainer, timeAndMaterials
 
     # Selected disciplines for multi-discipline projects (stored as JSON array)
     selected_disciplines = Column(JSON, default=[])

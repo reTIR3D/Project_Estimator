@@ -42,7 +42,7 @@ class DeliverableTemplateBase(BaseModel):
 
 class DeliverableTemplateCreate(DeliverableTemplateBase):
     """Schema for creating a DeliverableTemplate."""
-    company_id: UUID
+    company_id: Optional[UUID] = None  # Optional - null for generic templates
 
 
 class DeliverableTemplateUpdate(BaseModel):
@@ -60,7 +60,7 @@ class DeliverableTemplateUpdate(BaseModel):
 class DeliverableTemplateResponse(DeliverableTemplateBase):
     """Schema for DeliverableTemplate response."""
     id: UUID
-    company_id: UUID
+    company_id: Optional[UUID] = None
     created_at: datetime
     updated_at: Optional[datetime]
 
