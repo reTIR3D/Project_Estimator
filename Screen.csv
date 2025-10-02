@@ -1,0 +1,29 @@
+Master Deliverables List,Unnamed: 1,Unnamed: 2,Unnamed: 3,Unnamed: 4,Unnamed: 5
+Screen Stage,,,,,
+Item No., Deliverable Description  , Status  , Status  , Discipline  , Notes  
+1, Process Design Basis  ,Prelim,IFR, Process  ,Including utillity and chemical requirements
+2, Process Flow Diagram  ,IFA,IFD, Process  , 
+3, Heat and Material Balance,IFA,IFD, Process  , 
+4, Preliminary or Red-line existing P&ID's  ,Prelim,IFR, Process  , 
+5, Line Sizing/Hydraulics,Prelim,,Process,To extent required to support P&ID development/revisions
+6, Site Topographical Survey Scope of Work,FYU,, C/S  , 
+7, Soils Report and/or Soils Boring Location Plan Scope of Work,FYU,, C/S  , 
+8, Civil/Structural conceptual design  ,Prelim,IFR, C/S  ,"Including building requirements; approx sizes, etc"
+9," Long lead or unique civil structural specifications (buildings, etc.)  ",Prelim,IFR,C/S,As appropriate to support execution plan and/or estimate  
+10, Materials of Construction Diagram  ,Prelim,IFR, Mech  ,As needed
+11, Equipment List  ,Prelim,IFR, Process  ,"Process data sheet not necessary, but some preliminary sizing basis needs to be included in equipment list. All equipment needs to be included if a factored TIC is required  "
+12, Piping Line List  ,Prelim,IFR, Mech  ,As required to support TIC; will depend on level of P&ID development  
+13, Piping Tie-in List  ,Prelim,IFR, Mech  , 
+14, Long lead or unique equipment specifications  ,Prelim,IFR, Mech  ,As appropriate to support execution plan and/or estimate  
+15, Area classification  ,Prelim,IFR, Elec  ,As appropriate to support execution plan and/or estimate  
+16, Electrical one-line diagrams  ,Prelim,IFR, Elec  , 
+17, Long lead electrical specifications  ,Prelim,IFR, Elec  ,As appropriate to support execution plan and/or estimate  
+18, System block diagram  ,Prelim,IFR, I&C  ,As appropriate to support execution plan and/or estimate  
+19, Long lead I&C specifications  ,Prelim,IFR, I&C  ,As appropriate to support execution plan and/or estimate  
+20, Conceptual plot plan  ,Prelim,IFR, Piping  ,Can be collaborative effort between structural and piping. Siting and code issues need to be assigned as appropriate; document needs to be squad checked  
+21, Piping Plan/One-Line and/or Preliminary Model w/BOM, Prelim,, Piping  ,As appropriate to support execution plan and/or TIC estimate  
+22, Options Analysis and Selection  ,IFR,IFA, Project  ,
+23, Project Basis of Design - all disciplines  ,IFR,IFA, Project  ,"Includes ISBL/OSBL definition; spec list; major crane requirements; constructability; engineering, procurement, construction plan  "
+24, Cost Estimate for Define Engineering  ,IFA,FYU, Project  , 
+25, Total Installed Cost Estimate  ,IFA,FYU, Project  ,Accuracy -30/+30%; includes basis of estimate document  
+26, Project milestone schedule  ,IFA,FYU, Project  ,Details for Screen Engineering included

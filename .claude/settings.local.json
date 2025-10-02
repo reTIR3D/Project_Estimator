@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git --version)",
+      "Bash(pip install:*)",
+      "Bash(npm install)",
+      "Bash(python:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker run:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(uvicorn:*)",
+      "Bash(dir:*)",
+      "Bash(alembic downgrade:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Bash(del verify_sheets.py)",
+      "Bash(alembic revision:*)",
+      "Bash(alembic current:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run dev:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(stop.bat)",
+      "Bash(cmd:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl:*)",
+      "Bash(./start.bat)",
+      "Bash(tasklist)",
+      "Bash(git init:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,62 @@
+Master Deliverables List,Unnamed: 1,Unnamed: 2,Unnamed: 3,Unnamed: 4,Unnamed: 5,Unnamed: 6
+Refine Stage,,,,,,
+Item No., Deliverable Description  , Status  , Status  , Status  , Discipline  , Notes  
+1,Process Design Basis,,IFA,IFD,Process,Including utillity and chemical requirements
+2,"Process, Utility and Auxiliary P&ID's",,IFA,IFD,Process,
+3,Demolition P&ID's (mark-ups of existing P&ID's),,IFA,IFD,Process,If required
+4,Design Review (Pre-HAZOP),Prelim,,,Process,
+5,Equipment Data Sheets,,IFA,IFD,Process,
+6,Process Instrument Datasheets (In-line only),,IFA,IFD,Process,Process condition input to I&C datasheets
+7,Relief reports,Prelim,,,Process,including relief valve datasheets and relief load summary
+8,Soils Report and/or Soils Boring Location Plan Scope of Work,FYU,,,C/S,If not completed in previous phase
+9,Site Topographical Survey Scope of Work,FYU,,,C/S,If not completed in previous phase
+10,Site Preparation Requirements,IFR,,,C/S,
+10.5,Civil Site & Drainage Drws,IFR,IFA,,C/S,
+11,Equipment Location Plans/Elevations,IFR,IFA,,C/S,
+12,"Building Specifications and General Arrangements (Control Rooms, MCC, etc.)",IFR,IFA,,C/S,for non-equipment items
+13,Foundation Sketches ,IFR,,,C/S,Prelim BOM as necessary for TIC
+14,Structural Steel Sketches,IFR,,,C/S,Prelim BOM as necessary for TIC
+15,"Underground Piping Systems:  Oily Water, Storm Water (sketches)",IFR,,,C/S,"underground, non-pressurized"
+16,GA's for Equipment Supported Ladders and Platforms,,IFA,IFB,C/S,to go with mechanical vessel drawings
+17,Materials of Construction Diagram,,IFA,IFD,Mech,If required
+18,Vessel Design Drawings,,IFA,IFB,Mech,
+19,Long Lead Equipment Specification,IFA,IFB,IFP,Mech,
+20,Long Lead Equipment Bid Tabs and Technical Evaluation,,IFA,,Mech,
+21,Balance of Equipment Specifications,IFR,,,Mech,for budgetary quotes only
+22,Piping Stress Analysis,Prelim,,,Mech,for critical lines
+23,Piping Line List,,IFA,IFD,Mech,including paint and insulation schedule; hydro & heat treat requirements
+24,Tie-in List,,IFA,IFD,Mech,Collaborative effort between mechanical and piping.
+25,Equipment List,IFR,,,Mech,
+26,Specialty Item List,IFR,,,Mech,
+27,30% Model Review,IFR,,,Piping,
+28,Piping Plan/One-Line and/or Preliminary Model w/BOM,IFR,,,Piping,As appropriate to support execution plan and/or TIC estimate  
+29,"Isometric Sketches for High Temperature, Alloy and Large (>24"") Piping",IFR,,,Piping,
+30,"System Modeling - (Arc Flash, Relay Coordination, etc.)",IFR,,,Elec,
+31,Electrical One-Line,,IFA,IFD,Elec,
+32,Electrical Area Classification,,IFA,IFD,Elec,
+33,Electrical Load List,,IFA,IFD,Elec,
+34,Electrical Data Sheets ,,IFA,IFB,Elec,
+35,Electrical/MCC Building Layout,IFA,IFB,IFD,Elec,
+36,"Cable tray, underground conduit and fiber optic routing - preliminary",IFR,,,Elec,
+37,Long Lead Electrical Equipment Specifications,IFA,IFB,IFP,Elec, 
+38,Long Lead Electrical Equipment Bid Tab and Technical Evaluation,IFA,,,Elec,
+39,Instrument Index and Pricing Basis,,IFA,IFD,I&C,
+40,Control system cabinet design ,,IFA,IFB,I&C,
+41,DCS Interface/Requirements and Pricing,,IFA,IFB,I&C,
+42,"Instrument datasheets (in-line, long lead, specialty)",,IFA,IFB,I&C,
+43,Long Lead I&C Specifications,IFA,IFB,IFP,I&C,"RIE Buildings, cabinets, control valves, instruments, etc."
+44,Long Lead I&C Bid Tabs and Technical Evaluations,,IFA,,I&C,
+45,SIL and Layer of Protection Analysis,Prelim,,,I&C,
+46,Safety Instrumented Systems Review,Prelim,,,I&C,
+47,Control building layout,IFA,IFB,IFD,I&C,
+48,Control system philosophy & narrative,Prelim,,,I&C,
+49,Project Equipment Inspection Requirements/Plan,IFR,IFA,,Procurement,
+50,Long Lead Equipment Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+51,Long Lead Electrical Equipment Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+52,Long Lead I&C Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+53,Initial Value Engineering and Constructability Assessment,IFR,IFA,,PM,
+54,Definitive Cost Estimate with ISBL and OSBL Components,,IFA,FYU,PM,Accuracy -10/+15%
+55,"Execution Plan for Detail Design, Procurement and Construction",,IFA,FYU,PM,
+56,Major crane requirements and Preliminary Rigging and Lifting Plans,IFR,IFA,,PM,
+57,Define stage ISBL and OSBL Consolidated EPC Project Schedule,,IFA,FYU,PM,
+58,Basis of Design - all disciplines,,IFA,IFD,PM,"Input from all disciplines. Includes ISBL/OSBL definition; spec list; major crane requirements; constructability; engineering, procurement, construction plan  "

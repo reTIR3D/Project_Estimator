@@ -1,0 +1,174 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║   👋 WELCOME TO THE ENGINEERING ESTIMATION SYSTEM!          ║
+║                                                              ║
+║   🎯 NEW USER? FOLLOW THESE 3 SIMPLE STEPS                  ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────┐
+│  STEP 0: Check if you have everything (RECOMMENDED)          │
+│                                                               │
+│  🔍 Run the Prerequisite Checker first!                      │
+│                                                               │
+│  🪟 WINDOWS: Double-click check_prerequisites.bat            │
+│  🍎 MAC/LINUX: Run ./check_prerequisites.sh                  │
+│                                                               │
+│  This will:                                                   │
+│  ✓ Scan your system for required software                    │
+│  ✓ Tell you exactly what's missing                           │
+│  ✓ Provide download links                                    │
+│  ✓ Open download pages in your browser                       │
+│                                                               │
+│  Takes 10 seconds - saves you time later!                    │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│  STEP 1: Install required software (if missing)              │
+│                                                               │
+│  You need these 2 things:                                    │
+│                                                               │
+│  ✅ Docker Desktop                                           │
+│     https://docker.com/products/docker-desktop              │
+│     • Windows/Mac: Download and install                      │
+│     • Makes setup fully automatic                            │
+│                                                               │
+│  ✅ Node.js (LTS version)                                    │
+│     https://nodejs.org                                       │
+│     • Download the LTS (Long Term Support) version           │
+│     • Includes npm automatically                             │
+│                                                               │
+│  💡 TIP: The prerequisite checker gives you direct links!    │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│  STEP 2: Run the setup wizard                                │
+│                                                               │
+│  🪟 WINDOWS USERS:                                           │
+│     Double-click: setup_wizard.bat                           │
+│                                                               │
+│  🍎 MAC/LINUX USERS:                                         │
+│     Open Terminal and run: ./setup_wizard.sh                 │
+│                                                               │
+│  The wizard will:                                             │
+│  • Check prerequisites again                                 │
+│  • Install all dependencies                                  │
+│  • Setup database                                            │
+│  • Configure everything automatically                        │
+│                                                               │
+│  ⏱️  Takes 5-10 minutes (first time only)                    │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│  STEP 3: Start the system (every time you use it)            │
+│                                                               │
+│  🪟 WINDOWS: Double-click START_HERE.bat                     │
+│  🍎 MAC/LINUX: Run ./START_HERE.sh                           │
+│                                                               │
+│  This will:                                                   │
+│  • Start backend automatically                               │
+│  • Start frontend in new window                              │
+│  • Open browser to http://localhost:3000                     │
+│                                                               │
+│  ⏱️  Takes 30 seconds to start                               │
+└──────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+🎯 QUICK TEST AFTER SETUP:
+
+1. Click "Quick Estimate"
+2. Select "Medium" size
+3. Check "Fast-track" + "Multi-discipline" boxes
+4. Select "Type A" client
+5. Watch: 2,898 hours appear instantly! ✨
+
+═══════════════════════════════════════════════════════════════
+
+📁 FILES IN THIS FOLDER:
+
+🔍 Prerequisite Checker (RUN THIS FIRST!)
+   • check_prerequisites.bat (Windows)
+   • check_prerequisites.sh (Mac/Linux)
+   → Scans system and shows what to install
+
+🎯 Setup Files (ONE-TIME SETUP)
+   • setup_wizard.bat (Windows)
+   • setup_wizard.sh (Mac/Linux)
+   → Installs and configures everything
+
+▶️ Start Files (USE EVERY TIME)
+   • START_HERE.bat (Windows)
+   • START_HERE.sh (Mac/Linux)
+   → Starts the application
+
+📚 Documentation
+   • README.md - Overview and quick links
+   • SETUP_INSTRUCTIONS.md - Detailed setup guide
+   • QUICKSTART.md - 5-minute quick guide
+   • SETUP_GUIDE.md - Complete setup manual
+
+═══════════════════════════════════════════════════════════════
+
+💡 SMART WORKFLOW:
+
+First Time User:
+1. Run check_prerequisites.bat → See what you need
+2. Install missing software → Get everything ready
+3. Run setup_wizard.bat → Automatic setup
+4. Run START_HERE.bat → Use the system!
+
+Every Time After:
+Just run START_HERE.bat → System starts immediately
+
+═══════════════════════════════════════════════════════════════
+
+🆘 TROUBLESHOOTING:
+
+Problem: "Docker is not running"
+Solution: Start Docker Desktop app, wait for it to say "Running"
+
+Problem: "Python not found"
+Solution: Download from python.org, check "Add to PATH" during install
+
+Problem: "npm not found"
+Solution: Reinstall Node.js from nodejs.org
+
+Problem: Setup takes too long
+Answer: Normal! First time downloads images (5-10 min)
+
+Problem: Nothing happens when I double-click
+Windows: Right-click → "Run as administrator"
+Mac: Right-click → Open (allow unsigned apps)
+
+═══════════════════════════════════════════════════════════════
+
+📚 NEED MORE HELP?
+
+• Quick setup: SETUP_INSTRUCTIONS.md
+• Detailed guide: SETUP_GUIDE.md
+• Troubleshooting: SETUP_GUIDE.md (bottom section)
+• API docs: http://localhost:8000/api/docs (after setup)
+
+═══════════════════════════════════════════════════════════════
+
+💡 PRO TIP: The prerequisite checker is your friend!
+
+It will:
+✓ Save you time by finding issues early
+✓ Give you exact download links
+✓ Open pages in your browser automatically
+✓ Verify everything before setup
+
+Run it first - it only takes 10 seconds! 🚀
+
+═══════════════════════════════════════════════════════════════
+
+🎉 READY TO GET STARTED?
+
+1. Run check_prerequisites.bat (Windows) or ./check_prerequisites.sh (Mac/Linux)
+2. Install any missing software
+3. Run setup_wizard.bat (Windows) or ./setup_wizard.sh (Mac/Linux)
+4. Start estimating your engineering projects!
+
+═══════════════════════════════════════════════════════════════

@@ -1,0 +1,86 @@
+Master Deliverables List,Unnamed: 1,Unnamed: 2,Unnamed: 3,Unnamed: 4,Unnamed: 5,Unnamed: 6
+Implement Stage,,,,,,
+Item No., Deliverable Description  , Status  , Status  , Status  , Discipline  , Notes  
+1,"Process, Utility and Auxiliary P&ID's",,,IFC,Process,
+2,Demolition P&ID's (mark-ups of existing P&ID's),,,IFC,Process,
+3,HAZOP Review,,,Final,Process,
+4,Relief reports,,,Final,Process,including relief valve datasheets and relief load summary
+5,Relief Valve Datasheets,,IFA,IFP,Process,
+6,Flare Study Addendums,,IFA,Final,Process,
+7,MOC Log,,IFA,Final,Process,to track changes after HAZOP
+8,Process Flow Diagram  ,Project Bk Only,,,Process,"(IFD) Include in final project book, but not a detailed deliverable"
+9,Heat and Material Balance,Project Bk Only,,,Process,"(IFD) Include in final project book, but not a detailed deliverable"
+10,Equipment Data Sheets,Project Bk Only,,,Process,"(IFD) Include in final project book, but not a detailed deliverable"
+11,Process Instrument Datasheets (In-line only),Project Bk Only,,,Process,"(IFD) Include in final project book, but not a detailed deliverable"
+12,Process Design Basis,Project Bk Only,,,Process,"(IFD) Include in final project book, but not a detailed deliverable"
+13,Site Preparation Requirements (grading plans/sections),,IFA,IFC,C/S,
+14,Equipment Location Plans/Elevations,,,IFC,C/S,
+15,"Building Specifications and General Arrangements (Control Rooms, MCC, etc.)",,IFB,,C/S,for non-equipment items
+16,Concrete Location Plan,,IFA,IFC,C/S,
+17,Concrete Detail Drawings,,IFA,IFC,C/S,
+18,Paving Plan,,IFA,IFC,C/S,
+19,Structural Steel Location Plan,,IFA,IFC,C/S,
+20,Structural Steel Drawings,,IFA,IFC,C/S,
+21,Fire Protection Coating Drawings,,IFA,IFC,C/S,fireproofing
+22,Civil/Structural General Notes,,IFA,IFC,C/S,
+23,Drilled Pier or Footing Schedule and Details,,IFA,IFC,C/S,
+24,Anchor Rod Schedule and Details,,IFA,IFC,C/S,
+25,"Underground Piping Systems:  Oily Water, Storm Water Drawings",,IFA,IFC,C/S,"underground, non-pressurized"
+26,Soils Report and/or Soils Boring Location Plan Scope of Work,Project Bk Only,,,C/S,"(IFU) Include in final project book, but not a detailed deliverable"
+27,Site Topographical Survey Scope of Work,Project Bk Only,,,C/S,"(IFU) Include in final project book, but not a detailed deliverable"
+28,GA's for Equipment Supported Ladders and Platforms,Project Bk Only,,,C/S,"(IFB) Include in final project book, but not a detailed deliverable"
+29, Vessel Design Drawings,,IFD,,Mech,included in IFP technical specification
+30, Equipment Specifications,IFA,IFB,IFP,Mech,
+31, Equipment Bid Tab and Technical Evaluation,,IFA,,Mech,
+32, Piping Stress Analysis,,IFA,Final,Mech,if these are issued
+33, Engineered Pipe Supports,,IFA,IFP,Mech,springs/snubbers (non-standard and non-MPS supports)
+34, Piping Line List,,,IFC,Mech, 
+35, Tie-in List,,,IFC,Mech,Collaborative effort between mechanical and piping.
+36, Equipment List,,IFA,FInal,Mech,
+37, Specialty Item List,,IFA,FInal,Mech,
+38, Materials of Construction Diagram,Project Bk Only,,,Mech,"(IFD) Include in final project book, but not a detailed deliverable"
+39,60% Model Review,IFR,,,Piping,Navis Model
+40,90% Model Review,,IFA,,Piping,Navis Model
+41,Piping BOM,,IFA,IFP,Piping,
+42,Isometrics,,IFA,IFC,Piping,includes Fire Water/Potable Piping
+43,Miscellanous Pipe Supports,,IFA,IFC,Piping,
+44,Piping Plans and Elevations,,IFA,IFC,Piping,
+45,"System Modeling - (Arc Flash, Relay Coordination, etc.)",,IFA,IFRecord,Elec,
+46,Electrical One-Line,,IFA,IFC,Elec,if not IFA'd in define
+47,Electrical Area Classification,,IFA,IFC,Elec,if not IFA'd in define
+48,Electrical Load List,,IFA,IFC,Elec,if not IFA'd in define
+49,Electrical Data Sheets ,,,IFP,Elec,
+50,Cable tray detail and plan drawings,,IFA,IFC,Elec,
+51,Power plan drawings,,IFA,IFC,Elec,
+52,Ductbank details and plan drawings,,IFA,IFC,Elec,
+53,Electrical Cable Schedule,,IFA,IFC,Elec,Balance of work not covered in Define phase
+54,Grounding Plan,,IFA,IFC,Elec,
+55,Lighting Plan,,IFA,IFC,Elec,
+56,Demo wiring and plan drawings,,IFA,IFC,Elec,
+57,Motor Schematics,,IFA,IFC,Elec,
+58,Wiring Diagrams,,IFA,IFC,Elec,
+59,Electrical BOM,,IFA,IFP,Elec,
+60,Installation Details,IFR,,,Elec,Issue new or project approval details as IFA/IFR 
+61,Instrument Index,,IFA,IFC,I&C,if not IFA'd in define
+62,Instrument datasheets ,IFA,IFB,IFP,I&C,Balance of instruments not purchased in Define Phase
+63,Instrument Cable Schedule,,IFA,IFC,I&C,
+64,Field Junction Box layouts,,IFA,IFC,I&C,
+65,Marshalling panel layouts,,IFA,IFC,I&C,
+66,Control system cabinet design ,,IFA,IFC,I&C,IFP if we are purchasing
+67,Loop Diagrams,,IFA,IFC,I&C,
+68,Wiring Diagrams,,IFA,IFC,I&C,
+69,Instrument plan drawings,,IFA,IFC,I&C,
+70,Demo wiring and plan drawings,,IFA,IFC,I&C,
+71,Installation Details,IFR,,,I&C,Issue new or project approval details as IFA/IFR 
+72,Instrument Installation BOM,,IFA,IFP,I&C,
+73,FAT/SAT Procedures and Execution,,IFA,IFRecord,I&C,
+74,PLC/HMI Programming,,IFA,IFRecord,I&C,
+75,Cause and Effect Matrix,,IFA,IFC,I&C,
+76,Control system philosophy & narrative,,IFA,IFC,I&C,Balance of work not covered in Define phase
+77,SIL Calculations,,IFA,IFRecord,I&C,
+78,Mechanical Equipment Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+79,Electrical Equipment Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+80,I&C Commercial Bid Tab and Purchase Recommendation,,IFA,,Procurement,
+81,"Execution Plan for Detail Design, Procurement and Construction",,IFA,FYU,PM,If not completed in define
+82,Detail project schedule,,IFA,FYU,PM,Updated/refined from define phase
+83,Basis of Design - all disciplines,,,Final,PM,updated from define phase as required
