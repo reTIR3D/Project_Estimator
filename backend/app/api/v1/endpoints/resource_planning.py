@@ -1,10 +1,8 @@
 """Resource planning endpoints."""
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 
-from app.api import deps
 from app.services.resource_planning import ResourcePlanner
 
 router = APIRouter()
@@ -13,8 +11,7 @@ router = APIRouter()
 @router.post("/calculate-fte")
 async def calculate_fte_requirements(
     deliverables: List[dict],
-    duration_weeks: int = 12,
-    db: Session = Depends(deps.get_db)
+    duration_weeks: int = 12
 ):
     """
     Calculate FTE requirements by discipline over time.
@@ -43,8 +40,7 @@ async def calculate_fte_requirements(
 @router.post("/recommend-team")
 async def recommend_team_structure(
     total_hours: int,
-    duration_weeks: int = 12,
-    db: Session = Depends(deps.get_db)
+    duration_weeks: int = 12
 ):
     """
     Get team structure recommendation based on total hours.
@@ -76,8 +72,7 @@ async def recommend_team_structure(
 async def get_reality_checks(
     deliverables: List[dict],
     duration_weeks: int = 12,
-    total_hours: int = 0,
-    db: Session = Depends(deps.get_db)
+    total_hours: int = 0
 ):
     """
     Get reality check warnings for resource planning.
