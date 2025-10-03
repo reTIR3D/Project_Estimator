@@ -12,14 +12,14 @@ cd /d "%~dp0"
 
 REM Pull latest changes
 echo [1/4] Pulling latest changes from origin/master...
-git fetch origin master
-git pull origin master
-
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo WARNING: Git pull failed. Starting with current code...
-    timeout /t 3 /nobreak >nul
+git fetch origin master 2>nul
+git pull origin master 2>nul
+if %ERRORLEVEL% EQU 0 (
+    echo Successfully updated from GitHub!
+) else (
+    echo Already up to date or pull not needed.
 )
+echo.
 
 echo.
 echo [2/4] Starting Backend Server (Port 8000)...
