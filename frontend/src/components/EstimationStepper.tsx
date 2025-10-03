@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type EstimationStep = 'setup' | 'team' | 'deliverables' | 'wbs' | 'raci' | 'costs' | 'summary';
+export type EstimationStep = 'setup' | 'team' | 'equipment' | 'deliverables' | 'wbs' | 'raci' | 'costs' | 'summary';
 
 interface Step {
   id: EstimationStep;
@@ -11,6 +11,7 @@ interface Step {
 const steps: Step[] = [
   { id: 'setup', name: 'Setup', description: 'Project configuration' },
   { id: 'team', name: 'Team', description: 'Build project team' },
+  { id: 'equipment', name: 'Equipment', description: 'Equipment list (optional)' },
   { id: 'deliverables', name: 'Deliverables', description: 'Select deliverables' },
   { id: 'wbs', name: 'Work Breakdown', description: 'Structure & tasks' },
   { id: 'raci', name: 'RACI', description: 'Role assignments' },

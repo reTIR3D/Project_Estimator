@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { getRecommendedDependencies } from '../config/deliverableDependencies';
 
 interface Deliverable {
   name: string;
@@ -201,12 +202,21 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
   };
 
   const toggleDeliverable = (deliverableKey: string) => {
+    console.log('Toggling deliverable:', deliverableKey);
+    console.log('Current selection size:', selectedDeliverables.size);
+    console.log('Current selection:', Array.from(selectedDeliverables));
+
     const newSelection = new Set(selectedDeliverables);
     if (newSelection.has(deliverableKey)) {
       newSelection.delete(deliverableKey);
+      console.log('Removed from selection');
     } else {
       newSelection.add(deliverableKey);
+      console.log('Added to selection');
     }
+
+    console.log('New selection size:', newSelection.size);
+    console.log('New selection:', Array.from(newSelection));
     setSelectedDeliverables(newSelection);
   };
 
@@ -246,6 +256,44 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
     setShowAddModal(false);
     setNewDeliverableName('');
     setNewDeliverableHours(0);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedDeliverables.size === 0) return;
+
+    if (confirm(`Delete ${selectedDeliverables.size} selected deliverable${selectedDeliverables.size > 1 ? 's' : ''}?`)) {
+      // Remove from custom deliverables
+      setCustomDeliverables(prev => {
+        const updated = { ...prev };
+        selectedDeliverables.forEach(key => {
+          const [phase, discipline, ...nameParts] = key.split('-');
+          const name = nameParts.join('-');
+
+          if (updated[phase]?.[discipline]) {
+            updated[phase][discipline] = updated[phase][discipline].filter(d => d.name !== name);
+
+            // Clean up empty arrays
+            if (updated[phase][discipline].length === 0) {
+              delete updated[phase][discipline];
+            }
+            if (Object.keys(updated[phase]).length === 0) {
+              delete updated[phase];
+            }
+          }
+        });
+        return updated;
+      });
+
+      // Remove from selections and adjusted hours
+      setSelectedDeliverables(new Set());
+      setAdjustedHours(prev => {
+        const updated = { ...prev };
+        selectedDeliverables.forEach(key => {
+          delete updated[key];
+        });
+        return updated;
+      });
+    }
   };
 
   const getPhaseColor = (color: string) => {
@@ -311,6 +359,7 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
             const hours = adjustedHours[key] || d.hours;
             deliverables.push({
               name: d.name,
+              discipline: discipline,
               description: `${discipline} ⭐`,
               milestone: phase,
               base_hours: d.hours,
@@ -332,6 +381,7 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
             const hours = adjustedHours[key] || d.hours;
             deliverables.push({
               name: d.name,
+              discipline: discipline,
               description: `${discipline} - Custom deliverable`,
               milestone: phase,
               base_hours: d.hours,
@@ -342,6 +392,31 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
           }
         });
       });
+    });
+
+    // Auto-apply dependency rules
+    deliverables.forEach((deliv) => {
+      const recommendedPrereqs = getRecommendedDependencies(deliv.name);
+      const dependencies: any[] = [];
+
+      console.log(`Template mode - Dependencies for ${deliv.name}:`, recommendedPrereqs);
+
+      recommendedPrereqs.forEach((prereqName) => {
+        const prereqDelivs = deliverables.filter(d => d.name === prereqName);
+        console.log(`  Found ${prereqDelivs.length} matches for prerequisite "${prereqName}"`);
+
+        prereqDelivs.forEach(prereqDeliv => {
+          if (prereqDeliv.id !== deliv.id) {
+            dependencies.push({
+              deliverable_id: prereqDeliv.id,
+              dependency_type: 'prerequisite',
+            });
+          }
+        });
+      });
+
+      console.log(`  Total dependencies added: ${dependencies.length}`);
+      deliv.dependencies = dependencies;
     });
 
     onLoadTemplate(deliverables);
@@ -427,6 +502,16 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
         </div>
       </div>
 
+      {/* Debug Info */}
+      <div className="p-4 bg-yellow-50 border border-yellow-200 m-6 rounded">
+        <div className="text-sm font-mono">
+          <div>Disciplines in template: {template.disciplines ? template.disciplines.length : 0}</div>
+          <div>Disciplines: {template.disciplines ? JSON.stringify(template.disciplines) : 'none'}</div>
+          <div>Expanded disciplines: {expandedDisciplines.size}</div>
+          <div>Selected deliverables: {selectedDeliverables.size}</div>
+        </div>
+      </div>
+
       {/* Compact Table Layout - Disciplines on Left */}
       <div className="p-6">
         <div className="overflow-x-auto">
@@ -500,13 +585,14 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
                                   ) : (
                                     deliverables.map((deliverable, idx) => {
                                       const key = `${phaseKey}-${discipline}-${deliverable.name}`;
+                                      console.log(`[RENDER] Deliverable key: "${key}", isSelected: ${selectedDeliverables.has(key)}`);
                                       const currentHours = adjustedHours[key] || deliverable.hours;
                                       const isModified = currentHours !== deliverable.hours;
                                       const isSelected = selectedDeliverables.has(key);
 
                                       return (
                                         <div
-                                          key={idx}
+                                          key={key}
                                           className={`p-3 rounded-lg border-2 transition-all ${
                                             isSelected
                                               ? 'bg-blue-50 border-blue-400 shadow-sm'
@@ -517,10 +603,14 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
                                             <input
                                               type="checkbox"
                                               checked={isSelected}
-                                              onChange={() => toggleDeliverable(key)}
+                                              onChange={() => {
+                                                console.log('CHECKBOX CLICKED! Key:', key);
+                                                toggleDeliverable(key);
+                                              }}
                                               className="mt-0.5 h-4 w-4 text-blue-600 rounded flex-shrink-0"
                                             />
                                             <div className="flex-1 min-w-0">
+                                              <div className="text-xs text-gray-500 mb-0.5">{discipline}</div>
                                               <div
                                                 className="text-sm font-medium text-gray-900 cursor-pointer leading-snug"
                                                 onClick={() => toggleDeliverable(key)}
@@ -775,6 +865,14 @@ export default function DeliverablesMatrix({ projectSize, discipline, selectedDi
               >
                 Load Selected Deliverables
               </button>
+              {selectedDeliverables.size > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  🗑️ Delete {selectedDeliverables.size} Selected
+                </button>
+              )}
             </div>
           </div>
         </div>

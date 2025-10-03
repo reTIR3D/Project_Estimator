@@ -17,7 +17,7 @@ class DeliverableBase(BaseSchema):
     milestone: Milestone
     sequence_number: int = Field(..., ge=1)
     duration_days: int = Field(..., ge=1)
-    dependencies: list = Field(default_factory=list)
+    dependencies: list = Field(default_factory=list)  # List of {deliverable_id, dependency_type}
     expected_sheets: int = Field(default=0, ge=0)  # Expected number of sheets/pages
     hours_create: int = Field(default=0, ge=0)
     hours_review: int = Field(default=0, ge=0)
@@ -26,6 +26,16 @@ class DeliverableBase(BaseSchema):
     hours_revisions: int = Field(default=0, ge=0)
     hours_pm: int = Field(default=0, ge=0)
     hours_total: int = Field(default=0, ge=0)
+
+    # Equipment-driven estimation fields
+    equipment_id: Optional[str] = None
+    discipline: Optional[str] = None
+    base_hours: Optional[int] = Field(None, ge=0)
+
+    # Issue state configuration
+    issue_states: list = Field(default_factory=lambda: ["IFR", "IFC"])
+    review_cycles: int = Field(default=1, ge=0)
+    rework_factor: int = Field(default=25, ge=0, le=100)  # Percentage
 
 
 class DeliverableCreate(DeliverableBase):
@@ -48,6 +58,15 @@ class DeliverableUpdate(BaseSchema):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     progress_percent: Optional[int] = Field(None, ge=0, le=100)
+
+    # New fields for equipment-driven estimation and configuration
+    equipment_id: Optional[str] = None
+    discipline: Optional[str] = None
+    base_hours: Optional[int] = Field(None, ge=0)
+    dependencies: Optional[list] = None
+    issue_states: Optional[list] = None
+    review_cycles: Optional[int] = Field(None, ge=0)
+    rework_factor: Optional[int] = Field(None, ge=0, le=100)
 
 
 class Deliverable(BaseDBSchema, DeliverableBase):

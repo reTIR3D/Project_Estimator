@@ -10,6 +10,9 @@ import Companies from './pages/Companies';
 import RateSheets from './pages/RateSheets';
 import TemplateConfigurator from './pages/TemplateConfigurator';
 import SizeSettings from './pages/SizeSettings';
+import DeliverablesPrototype from './pages/DeliverablesPrototype';
+import EquipmentPrototype from './pages/EquipmentPrototype';
+import IntegratedEstimationPrototype from './pages/IntegratedEstimationPrototype';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -97,6 +100,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <SizeSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deliverables-prototype"
+            element={
+              <ProtectedRoute>
+                <DeliverablesPrototype />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/equipment-prototype"
+            element={
+              <ProtectedRoute>
+                <EquipmentPrototype />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/integrated-prototype"
+            element={
+              <ProtectedRoute>
+                <IntegratedEstimationPrototype />
               </ProtectedRoute>
             }
           />

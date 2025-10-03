@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { estimationApi, projectsApi } from '../services/api';
+import { estimationApi, projectsApi, companiesApi, rateSheetsApi } from '../services/api';
 import ComplexityFactors from '../components/ComplexityFactors';
 import EstimationSummary from '../components/EstimationSummary';
 import DeliverablesMatrix from '../components/DeliverablesMatrix';
@@ -10,6 +10,9 @@ import CostBreakdown from '../components/CostBreakdown';
 import PhaseGateTracker from '../components/PhaseGateTracker';
 import EstimationStepper, { EstimationStep } from '../components/EstimationStepper';
 import TeamBuilder, { TeamMember } from '../components/TeamBuilder';
+import AddEquipmentModal from '../components/AddEquipmentModal';
+import AddDeliverableModal from '../components/AddDeliverableModal';
+import DeliverableConfigModal from '../components/DeliverableConfigModal';
 import type {
   ProjectSize,
   ClientProfile,
@@ -20,7 +23,15 @@ import type {
   ProjectPhase,
   CostCalculationRequest,
   CostCalculationResponse,
+  Company,
+  RateSheet,
+  Equipment,
+  IssueState,
+  DeliverableDependency,
+  EquipmentTemplateKey,
 } from '../types';
+import { EQUIPMENT_TEMPLATES } from '../config/equipmentTemplates';
+import { getRecommendedDependencies } from '../config/deliverableDependencies';
 
 export default function ProjectEstimation() {
   const { id } = useParams<{ id: string }>();
@@ -40,16 +51,111 @@ export default function ProjectEstimation() {
   const [selectedDisciplines, setSelectedDisciplines] = useState<string[]>([]);
   const [deliverables, setDeliverables] = useState<any[]>([]);
   const [deliverablesTotal, setDeliverablesTotal] = useState<number>(0);
+  const [deliverablesLoaded, setDeliverablesLoaded] = useState<boolean>(false);
   const [costData, setCostData] = useState<CostCalculationResponse | null>(null);
   const [costLoading, setCostLoading] = useState(false);
   const [projectTeam, setProjectTeam] = useState<TeamMember[]>([]);
+
+  // Client and Rate Sheet state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
+  const [selectedRateSheetId, setSelectedRateSheetId] = useState<string>('');
 
   // Save/Load state
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Confirmation dialog state
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [disciplineToRemove, setDisciplineToRemove] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Equipment-driven estimation state
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [showAddEquipmentModal, setShowAddEquipmentModal] = useState(false);
+  const [showAddDeliverableModal, setShowAddDeliverableModal] = useState(false);
+  const [useEquipmentMode, setUseEquipmentMode] = useState(false);
+  const [configDeliverable, setConfigDeliverable] = useState<any | null>(null);
+  const [selectedDeliverableIds, setSelectedDeliverableIds] = useState<Set<string>>(new Set());
+
+  // Load companies on mount
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const companiesList = await companiesApi.list(undefined, true);
+        setCompanies(companiesList);
+      } catch (error) {
+        console.error('Failed to load companies:', error);
+      }
+    };
+    loadCompanies();
+  }, []);
+
+  // Load rate sheets when company is selected and populate contingency/complexity
+  useEffect(() => {
+    const loadRateSheets = async () => {
+      if (selectedCompanyId) {
+        try {
+          // Get company details for contingency and complexity
+          const company = await companiesApi.get(selectedCompanyId);
+
+          // Auto-populate contingency from company
+          if (company.base_contingency !== undefined && company.base_contingency !== null) {
+            setContingency(company.base_contingency);
+          }
+
+          // Auto-populate complexity factors from company complexity rating
+          if (company.client_complexity !== undefined && company.client_complexity !== null) {
+            // Map client_complexity (1-10) to complexity factors
+            // Higher complexity = more challenging project conditions
+            const complexityLevel = company.client_complexity;
+            const newComplexityFactors: ComplexityFactorsType = {};
+
+            // Map complexity to factor values based on scale
+            if (complexityLevel >= 7) {
+              // High complexity client (7-10)
+              newComplexityFactors.regulatory_requirements = 'high';
+              newComplexityFactors.site_access = 'difficult';
+              newComplexityFactors.documentation_requirements = 'extensive';
+            } else if (complexityLevel >= 4) {
+              // Medium complexity client (4-6)
+              newComplexityFactors.regulatory_requirements = 'medium';
+              newComplexityFactors.site_access = 'moderate';
+              newComplexityFactors.documentation_requirements = 'standard';
+            } else {
+              // Low complexity client (1-3)
+              newComplexityFactors.regulatory_requirements = 'low';
+              newComplexityFactors.site_access = 'easy';
+              newComplexityFactors.documentation_requirements = 'minimal';
+            }
+
+            setComplexityFactors(newComplexityFactors);
+          }
+
+          // Load rate sheets
+          const sheets = await rateSheetsApi.list(selectedCompanyId, true);
+          setRateSheets(sheets);
+          // Auto-select default rate sheet if available
+          const defaultSheet = sheets.find(s => s.is_default);
+          if (defaultSheet) {
+            setSelectedRateSheetId(defaultSheet.id);
+          } else if (sheets.length > 0) {
+            setSelectedRateSheetId(sheets[0].id);
+          }
+        } catch (error) {
+          console.error('Failed to load company data and rate sheets:', error);
+          setRateSheets([]);
+        }
+      } else {
+        setRateSheets([]);
+        setSelectedRateSheetId('');
+      }
+    };
+    loadRateSheets();
+  }, [selectedCompanyId]);
 
   // Load project if editing
   useEffect(() => {
@@ -69,6 +175,51 @@ export default function ProjectEstimation() {
         setOverhead(data.overhead_percent || 10);
         setSelectedDisciplines(data.selected_disciplines || []);
         setLastSaved(data.updated_at ? new Date(data.updated_at) : null);
+
+        // Load equipment and deliverables if they exist
+        if (data.equipment_list && data.equipment_list.length > 0) {
+          setEquipmentList(data.equipment_list);
+          setUseEquipmentMode(true);
+        }
+        if (data.deliverables_config && data.deliverables_config.length > 0) {
+          // Ensure discipline field and ID are populated for loaded deliverables
+          const deliverablesWithDiscipline = data.deliverables_config.map((deliv: any, idx: number) => {
+            let updatedDeliv = { ...deliv };
+
+            // Ensure ID exists
+            if (!updatedDeliv.id) {
+              if (deliv.equipment_id) {
+                updatedDeliv.id = `deliv-${deliv.equipment_id}-${deliv.name.replace(/\s+/g, '-')}`;
+              } else {
+                updatedDeliv.id = `deliv-${idx}-${deliv.name.replace(/\s+/g, '-')}`;
+              }
+            }
+
+            // Ensure discipline exists
+            if (!updatedDeliv.discipline && deliv.equipment_id && data.equipment_list) {
+              // Try to find the equipment and re-populate discipline from template
+              const equipment = data.equipment_list.find((eq: any) => eq.id === deliv.equipment_id);
+              if (equipment) {
+                const template = EQUIPMENT_TEMPLATES[equipment.templateKey as EquipmentTemplateKey];
+                const delivTemplate = template?.deliverables.find(dt => dt.name === deliv.name);
+                if (delivTemplate) {
+                  updatedDeliv.discipline = delivTemplate.discipline;
+                }
+              }
+            }
+
+            return updatedDeliv;
+          });
+          setDeliverables(deliverablesWithDiscipline);
+        }
+
+        // Set company and rate sheet if available
+        if (data.company_id) {
+          setSelectedCompanyId(data.company_id);
+        }
+        if (data.rate_sheet_id) {
+          setSelectedRateSheetId(data.rate_sheet_id);
+        }
       });
     }
   }, [id, navigate]);
@@ -80,11 +231,32 @@ export default function ProjectEstimation() {
     }
   }, [projectSize, clientProfile, complexityFactors, contingency, overhead, selectedDisciplines, deliverables, projectTeam]);
 
+  // Auto-calculate project size based on total hours
+  useEffect(() => {
+    if (estimation?.total_hours) {
+      const hours = estimation.total_hours;
+      let newSize: ProjectSize;
+
+      if (hours < 500) {
+        newSize = 'SMALL';
+      } else if (hours <= 2000) {
+        newSize = 'MEDIUM';
+      } else {
+        newSize = 'LARGE';
+      }
+
+      if (newSize !== projectSize) {
+        setProjectSize(newSize);
+      }
+    }
+  }, [estimation?.total_hours]);
+
   // Auto-calculate when inputs change
   useEffect(() => {
     if (autoCalculate) {
       calculateEstimation();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectSize, clientProfile, complexityFactors, contingency, overhead, deliverablesTotal, autoCalculate]);
 
   const calculateEstimation = async () => {
@@ -149,8 +321,156 @@ export default function ProjectEstimation() {
       calculateCosts();
     } else {
       console.log('No deliverables to calculate costs for');
+      setCostData(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverables]);
+
+  // Auto-generate deliverables when equipment list changes (in equipment mode)
+  useEffect(() => {
+    if (!useEquipmentMode || equipmentList.length === 0) {
+      return;
+    }
+
+    const generatedDeliverables: any[] = [];
+
+    equipmentList.forEach((equipment) => {
+      const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
+      const sizeFactor = template.sizeFactors[equipment.size];
+      const complexityFactor = template.complexityFactors[equipment.complexity];
+
+      template.deliverables.forEach((delivTemplate) => {
+        const baseHours = Math.round(
+          delivTemplate.baseHours * sizeFactor * complexityFactor
+        );
+
+        generatedDeliverables.push({
+          id: `deliv-${equipment.id}-${delivTemplate.name.replace(/\s+/g, '-')}`,
+          name: delivTemplate.name,
+          discipline: delivTemplate.discipline,
+          equipment_tag: equipment.tag,
+          equipment_id: equipment.id,
+          base_hours: baseHours,
+          adjusted_hours: baseHours,
+          status: 'Not Started',
+          dependencies: [],
+          issue_states: ['IFR', 'IFC'],
+          review_cycles: 1,
+          rework_factor: 25,
+        });
+      });
+    });
+
+    // Auto-apply dependency rules
+    generatedDeliverables.forEach((deliv) => {
+      const equipment = equipmentList.find(e => e.id === deliv.equipment_id);
+      const recommendedPrereqs = getRecommendedDependencies(
+        deliv.name,
+        equipment?.templateKey
+      );
+
+      console.log(`Dependencies for ${deliv.name}:`, recommendedPrereqs);
+
+      const dependencies: any[] = [];
+
+      recommendedPrereqs.forEach((prereqName) => {
+        // Find matching deliverable(s) by name
+        const prereqDelivs = generatedDeliverables.filter(d => d.name === prereqName);
+        console.log(`  Found ${prereqDelivs.length} matches for prerequisite "${prereqName}"`);
+
+        prereqDelivs.forEach(prereqDeliv => {
+          // Avoid self-dependencies
+          if (prereqDeliv.id !== deliv.id) {
+            dependencies.push({
+              deliverable_id: prereqDeliv.id,
+              dependency_type: 'prerequisite',
+            });
+          }
+        });
+      });
+
+      console.log(`  Total dependencies added: ${dependencies.length}`);
+      deliv.dependencies = dependencies;
+    });
+
+    setDeliverables(generatedDeliverables);
+
+    // Calculate total hours
+    const total = generatedDeliverables.reduce((sum, d) => sum + (d.base_hours || 0), 0);
+    setDeliverablesTotal(total);
+  }, [equipmentList, useEquipmentMode]);
+
+  // Handler for saving deliverable configuration
+  const handleSaveDeliverableConfig = (updates: Partial<any>) => {
+    if (!configDeliverable) return;
+
+    setDeliverables((prev) =>
+      prev.map((d) =>
+        d.id === configDeliverable.id
+          ? { ...d, ...updates }
+          : d
+      )
+    );
+    setConfigDeliverable(null);
+  };
+
+  // Deliverable selection handlers
+  const handleToggleDeliverable = (delivId: string) => {
+    console.log('Toggle deliverable clicked:', delivId);
+    setSelectedDeliverableIds((prev) => {
+      console.log('Current selected IDs:', Array.from(prev));
+      const newSet = new Set(prev);
+      if (newSet.has(delivId)) {
+        newSet.delete(delivId);
+        console.log('Removed from selection');
+      } else {
+        newSet.add(delivId);
+        console.log('Added to selection');
+      }
+      console.log('New selected IDs:', Array.from(newSet));
+      return newSet;
+    });
+  };
+
+  const handleToggleAllDeliverables = (delivIds: string[]) => {
+    setSelectedDeliverableIds((prev) => {
+      const allSelected = delivIds.every(id => prev.has(id));
+      if (allSelected) {
+        // Deselect all
+        const newSet = new Set(prev);
+        delivIds.forEach(id => newSet.delete(id));
+        return newSet;
+      } else {
+        // Select all
+        return new Set([...prev, ...delivIds]);
+      }
+    });
+  };
+
+  const handleDeleteSelected = () => {
+    console.log('Delete button clicked');
+    console.log('Selected IDs:', Array.from(selectedDeliverableIds));
+    console.log('Current deliverables count:', deliverables.length);
+
+    if (selectedDeliverableIds.size === 0) {
+      console.log('No deliverables selected, returning');
+      return;
+    }
+
+    if (confirm(`Delete ${selectedDeliverableIds.size} selected deliverable${selectedDeliverableIds.size > 1 ? 's' : ''}?`)) {
+      console.log('User confirmed deletion');
+      const remainingDeliverables = deliverables.filter(d => {
+        const shouldKeep = !selectedDeliverableIds.has(d.id);
+        console.log(`Deliverable ${d.id}: ${shouldKeep ? 'keeping' : 'deleting'}`);
+        return shouldKeep;
+      });
+      console.log('Remaining deliverables count:', remainingDeliverables.length);
+      setDeliverables(remainingDeliverables);
+      setSelectedDeliverableIds(new Set());
+    } else {
+      console.log('User cancelled deletion');
+    }
+  };
 
   const handleSaveProject = async (showAlert = true) => {
     if (!project) return;
@@ -163,7 +483,11 @@ export default function ProjectEstimation() {
         complexity_factors: complexityFactors,
         contingency_percent: contingency,
         overhead_percent: overhead,
+        company_id: selectedCompanyId || undefined,
+        rate_sheet_id: selectedRateSheetId || undefined,
         selected_disciplines: selectedDisciplines,
+        equipment_list: equipmentList,
+        deliverables_config: deliverables,
       });
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
@@ -272,7 +596,7 @@ export default function ProjectEstimation() {
                   <div
                     className="h-full bg-blue-500 transition-all duration-500"
                     style={{
-                      width: `${(['setup', 'team', 'deliverables', 'wbs', 'raci', 'costs', 'summary'].findIndex(s => s === currentStep) / 6) * 100}%`
+                      width: `${(['setup', 'team', 'equipment', 'deliverables', 'wbs', 'raci', 'costs', 'summary'].findIndex(s => s === currentStep) / 7) * 100}%`
                     }}
                   />
                 </div>
@@ -281,6 +605,7 @@ export default function ProjectEstimation() {
                 {[
                   { key: 'setup', label: 'Setup' },
                   { key: 'team', label: 'Team' },
+                  ...(useEquipmentMode ? [{ key: 'equipment', label: 'Equipment' }] : []),
                   { key: 'deliverables', label: 'Deliverables' },
                   { key: 'wbs', label: 'WBS' },
                   { key: 'raci', label: 'RACI' },
@@ -289,7 +614,8 @@ export default function ProjectEstimation() {
                 ].map((step, index) => {
                   const isCurrent = currentStep === step.key;
                   const isCompleted = completedSteps.includes(step.key as EstimationStep);
-                  const stepIndex = ['setup', 'team', 'deliverables', 'wbs', 'raci', 'costs', 'summary'].findIndex(s => s === currentStep);
+                  const allSteps = ['setup', 'team', ...(useEquipmentMode ? ['equipment'] : []), 'deliverables', 'wbs', 'raci', 'costs', 'summary'];
+                  const stepIndex = allSteps.findIndex(s => s === currentStep);
                   const isPast = index < stepIndex;
 
                   return (
@@ -394,7 +720,7 @@ export default function ProjectEstimation() {
         </div>
 
         {/* Phase-Gate Tracker - Only for Phase-Gate Projects */}
-        {projectSize === 'PHASE_GATE' && (
+        {project?.work_type === 'PHASE_GATE' && (
           <div className="mb-6">
             <PhaseGateTracker
               currentPhase={project?.current_phase}
@@ -417,30 +743,61 @@ export default function ProjectEstimation() {
           {/* Step 1: Setup */}
           {currentStep === 'setup' && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Project Size */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Client & Rate Sheet Selection */}
                 <div className="bg-white rounded-lg shadow p-3">
-                  <h3 className="text-sm font-semibold mb-2">Project Size</h3>
-                  <div className="space-y-1.5">
-                    {[
-                      { value: 'SMALL', label: 'Small', hours: '< 500h' },
-                      { value: 'MEDIUM', label: 'Medium', hours: '500-2000h' },
-                      { value: 'LARGE', label: 'Large', hours: '> 2000h' },
-                      { value: 'PHASE_GATE', label: 'Phase-Gate', hours: 'Phased delivery' },
-                    ].map((size) => (
+                  <h3 className="text-sm font-semibold mb-2">Client & Rate Sheet</h3>
+
+                  {/* Client Selection */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Client</label>
+                    <select
+                      value={selectedCompanyId}
+                      onChange={(e) => setSelectedCompanyId(e.target.value)}
+                      className="w-full p-1.5 text-xs border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="">Select a client...</option>
+                      {companies.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Rate Sheet Selection */}
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Rate Sheet</label>
+                    {!selectedCompanyId ? (
+                      <div className="p-2 bg-gray-50 border-2 border-gray-200 rounded-lg text-xs text-gray-500">
+                        Select a client first
+                      </div>
+                    ) : rateSheets.length === 0 ? (
                       <button
-                        key={size.value}
-                        onClick={() => setProjectSize(size.value as ProjectSize)}
-                        className={`w-full p-1.5 border-2 rounded-lg transition-all text-left ${
-                          projectSize === size.value
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        onClick={() => navigate('/client-management', {
+                          state: {
+                            companyId: selectedCompanyId,
+                            returnTo: id ? `/project/${id}` : '/quick-estimate',
+                            returnLabel: project?.name || 'Project Estimation'
+                          }
+                        })}
+                        className="w-full p-2 bg-blue-50 border-2 border-blue-300 text-blue-700 rounded-lg hover:bg-blue-100 text-xs font-semibold transition-colors"
                       >
-                        <div className="font-semibold text-xs">{size.label}</div>
-                        <div className="text-xs text-gray-600">{size.hours}</div>
+                        + Add Rate Sheet
                       </button>
-                    ))}
+                    ) : (
+                      <select
+                        value={selectedRateSheetId}
+                        onChange={(e) => setSelectedRateSheetId(e.target.value)}
+                        className="w-full p-1.5 text-xs border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                      >
+                        {rateSheets.map((sheet) => (
+                          <option key={sheet.id} value={sheet.id}>
+                            {sheet.name} {sheet.is_default ? '(Default)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
 
@@ -450,25 +807,26 @@ export default function ProjectEstimation() {
                     <h3 className="text-sm font-semibold">Disciplines</h3>
                     <button
                       onClick={() => {
-                        const allDisciplines = ['Mechanical', 'Process', 'Civil', 'Structural', 'Survey', 'Electrical/Instrumentation', 'Automation'];
+                        const allDisciplines = ['Civil', 'Structural', 'Mechanical', 'Electrical/Instrumentation', 'Process', 'Piping', 'Controls', 'Architecture'];
                         setSelectedDisciplines(
                           selectedDisciplines.length === allDisciplines.length ? [] : allDisciplines
                         );
                       }}
                       className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
                     >
-                      {selectedDisciplines.length === 7 ? 'Deselect All' : 'Select All'}
+                      {selectedDisciplines.length === 8 ? 'Deselect All' : 'Select All'}
                     </button>
                   </div>
                   <div className="space-y-1">
                     {[
-                      { value: 'Mechanical', icon: '⚙️' },
-                      { value: 'Process', icon: '🔧' },
                       { value: 'Civil', icon: '🏗️' },
                       { value: 'Structural', icon: '🏛️' },
-                      { value: 'Survey', icon: '📐' },
+                      { value: 'Mechanical', icon: '⚙️' },
                       { value: 'Electrical/Instrumentation', icon: '⚡' },
-                      { value: 'Automation', icon: '🤖' },
+                      { value: 'Process', icon: '🔧' },
+                      { value: 'Piping', icon: '🔩' },
+                      { value: 'Controls', icon: '🎛️' },
+                      { value: 'Architecture', icon: '🏢' },
                     ].map((discipline) => {
                       const isSelected = selectedDisciplines.includes(discipline.value);
                       return (
@@ -476,7 +834,10 @@ export default function ProjectEstimation() {
                           key={discipline.value}
                           onClick={() => {
                             if (isSelected) {
-                              setSelectedDisciplines(selectedDisciplines.filter(d => d !== discipline.value));
+                              if (selectedDisciplines.includes(discipline.value)) {
+                                setDisciplineToRemove(discipline.value);
+                                setShowConfirmDialog(true);
+                              }
                             } else {
                               setSelectedDisciplines([...selectedDisciplines, discipline.value]);
                             }
@@ -504,25 +865,6 @@ export default function ProjectEstimation() {
                   )}
                 </div>
 
-                {/* Client Profile & Complexity Factors */}
-                <div className="bg-white rounded-lg shadow p-3">
-                  <h3 className="text-sm font-semibold mb-2">Client Profile</h3>
-                  <select
-                    value={clientProfile}
-                    onChange={(e) => setClientProfile(e.target.value as ClientProfile)}
-                    className="w-full p-1.5 text-xs border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none mb-2"
-                  >
-                    <option value="TYPE_A">Type A - Heavy Oversight (+40%)</option>
-                    <option value="TYPE_B">Type B - Standard Process (baseline)</option>
-                    <option value="TYPE_C">Type C - Minimal Oversight (-15%)</option>
-                    <option value="NEW_CLIENT">New Client - Conservative (+25%)</option>
-                  </select>
-
-                  <div className="pt-2 border-t border-gray-200">
-                    <ComplexityFactors factors={complexityFactors} onChange={setComplexityFactors} />
-                  </div>
-                </div>
-
                 {/* Contingency & Overhead & Actions */}
                 <div className="bg-white rounded-lg shadow p-3">
                   <h3 className="text-sm font-semibold mb-1">
@@ -543,7 +885,7 @@ export default function ProjectEstimation() {
                   </div>
 
                   <h3 className="text-sm font-semibold mb-1">
-                    Overhead: {overhead}%
+                    Overhead/Indirect: {overhead}%
                   </h3>
                   <input
                     type="range"
@@ -560,6 +902,10 @@ export default function ProjectEstimation() {
                   </div>
 
                   <div className="pt-2 border-t border-gray-200">
+                    <ComplexityFactors factors={complexityFactors} onChange={setComplexityFactors} />
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-200">
                     <h3 className="text-sm font-semibold mb-1.5">Actions</h3>
                     <div className="space-y-1.5">
                       <label className="flex items-center">
@@ -570,6 +916,22 @@ export default function ProjectEstimation() {
                           className="h-3.5 w-3.5 text-blue-600"
                         />
                         <span className="ml-2 text-xs">Auto-calculate</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={useEquipmentMode}
+                          onChange={(e) => {
+                            const enabled = e.target.checked;
+                            setUseEquipmentMode(enabled);
+                            if (!enabled) {
+                              // Clear equipment when disabling
+                              setEquipmentList([]);
+                            }
+                          }}
+                          className="h-3.5 w-3.5 text-blue-600"
+                        />
+                        <span className="ml-2 text-xs">⚙️ Equipment-driven estimation</span>
                       </label>
                       {!autoCalculate && (
                         <button
@@ -615,10 +977,154 @@ export default function ProjectEstimation() {
                   ← Back to Setup
                 </button>
                 <button
-                  onClick={() => setCurrentStep('deliverables')}
+                  onClick={() => setCurrentStep(useEquipmentMode ? 'equipment' : 'deliverables')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                 >
-                  Next: Deliverables →
+                  Next: {useEquipmentMode ? 'Equipment' : 'Deliverables'} →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 2.5: Equipment (Optional - when equipment mode is enabled) */}
+          {currentStep === 'equipment' && (
+            <>
+              {!useEquipmentMode ? (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="text-center py-12">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment Mode Disabled</h2>
+                    <p className="text-gray-600 mb-4">
+                      Equipment-driven estimation is not enabled. Please go back to Setup and enable it.
+                    </p>
+                    <button
+                      onClick={() => setCurrentStep('setup')}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      ← Back to Setup
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Equipment List</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Add equipment to auto-generate deliverables across disciplines
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddEquipmentModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
+                  >
+                    <span className="text-xl">+</span> Add Equipment
+                  </button>
+                </div>
+
+                {/* Equipment List */}
+                {equipmentList.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-6xl mb-4">⚙️</div>
+                    <p className="text-gray-600 font-medium mb-2">No equipment added yet</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add equipment to automatically generate deliverables
+                    </p>
+                    <button
+                      onClick={() => setShowAddEquipmentModal(true)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      Add Your First Equipment
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {equipmentList.map((equipment) => {
+                      const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
+                      const sizeFactor = template.sizeFactors[equipment.size];
+                      const complexityFactor = template.complexityFactors[equipment.complexity];
+                      const totalHours = template.deliverables.reduce(
+                        (sum, d) => sum + Math.round(d.baseHours * sizeFactor * complexityFactor),
+                        0
+                      );
+
+                      return (
+                        <div
+                          key={equipment.id}
+                          className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="text-4xl">{template.icon}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg font-bold text-gray-900">
+                                    {equipment.tag}
+                                  </h3>
+                                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                                    {template.type}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                                  <span className="capitalize">
+                                    Size: <strong>{equipment.size}</strong> ({sizeFactor}×)
+                                  </span>
+                                  <span className="capitalize">
+                                    Complexity: <strong>{equipment.complexity}</strong> ({complexityFactor}×)
+                                  </span>
+                                  <span className="text-blue-600 font-semibold">
+                                    {totalHours}h total
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Generates {template.deliverables.length} deliverables across{' '}
+                                  {new Set(template.deliverables.map(d => d.discipline)).size} disciplines
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove ${equipment.tag}? This will delete all associated deliverables.`)) {
+                                  setEquipmentList(equipmentList.filter(e => e.id !== equipment.id));
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-800 text-sm font-semibold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-bold text-gray-900">Total Equipment: {equipmentList.length}</h3>
+                          <p className="text-sm text-gray-600">
+                            Will generate {deliverables.length} deliverables • {deliverablesTotal}h estimated
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setCurrentStep('team')}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+                >
+                  ← Back to Team
+                </button>
+                <button
+                  onClick={() => setCurrentStep('deliverables')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                  disabled={useEquipmentMode && equipmentList.length === 0}
+                >
+                  Next: Review Deliverables →
                 </button>
               </div>
             </>
@@ -627,27 +1133,389 @@ export default function ProjectEstimation() {
           {/* Step 3: Deliverables */}
           {currentStep === 'deliverables' && (
             <>
-              <div className="bg-white rounded-lg shadow p-0">
-                <DeliverablesMatrix
-                  projectSize={projectSize}
-                  discipline={project?.discipline || 'MULTIDISCIPLINE'}
-                  selectedDisciplines={selectedDisciplines}
-                  projectTeam={projectTeam}
-                  onLoadTemplate={(templateDeliverables) => {
-                    setDeliverables(templateDeliverables);
-                    const total = templateDeliverables.reduce((sum, d) => sum + (d.adjusted_hours || d.base_hours || 0), 0);
-                    setDeliverablesTotal(total);
-                  }}
-                />
-              </div>
+              {deliverablesLoaded || deliverables.length > 0 ? (
+                // Modern deliverables view with configuration
+                <div className="space-y-6">
+                  {/* Header Card */}
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h2 className="text-3xl font-bold mb-2">
+                          {useEquipmentMode && equipmentList.length > 0 ? 'Generated Deliverables' : 'Project Deliverables'}
+                        </h2>
+                        <p className="text-blue-100">
+                          {useEquipmentMode && equipmentList.length > 0
+                            ? `${deliverables.length} deliverables from ${equipmentList.length} equipment items`
+                            : `${deliverables.length} deliverables configured`
+                          }
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => setShowAddDeliverableModal(true)}
+                          className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold text-sm flex items-center gap-2 transition-colors"
+                        >
+                          <span className="text-xl">+</span> Add Deliverable
+                        </button>
+                        {deliverables.length > 0 && (
+                          <button
+                            onClick={() => {
+                              if (selectedDeliverableIds.size === deliverables.length) {
+                                setSelectedDeliverableIds(new Set());
+                              } else {
+                                setSelectedDeliverableIds(new Set(deliverables.map(d => d.id)));
+                              }
+                            }}
+                            className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-semibold text-sm transition-colors"
+                          >
+                            {selectedDeliverableIds.size === deliverables.length ? '☐ Deselect All' : '☑ Select All'}
+                          </button>
+                        )}
+                        {selectedDeliverableIds.size > 0 && (
+                          <button
+                            onClick={handleDeleteSelected}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold text-sm flex items-center gap-2 transition-colors"
+                          >
+                            🗑️ Delete {selectedDeliverableIds.size} Selected
+                          </button>
+                        )}
+                        <div className="text-right">
+                          <div className="text-4xl font-bold">{deliverablesTotal}h</div>
+                          <div className="text-blue-100 text-sm">Total Estimated Hours</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Deliverables grouped by Equipment or Discipline */}
+                  <div className="space-y-4">
+                    {useEquipmentMode && equipmentList.length > 0 ? (
+                      // Group by Equipment
+                      equipmentList.map((equipment) => {
+                        const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
+                        const equipDeliverables = deliverables.filter(d => d.equipment_id === equipment.id);
+                        const equipTotal = equipDeliverables.reduce((sum, d) => sum + (d.base_hours || 0), 0);
+
+                        return (
+                          <div key={equipment.id} className="bg-white rounded-lg shadow border-2 border-gray-200 overflow-hidden">
+                            {/* Equipment Header */}
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b-2 border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="text-4xl">{template.icon}</div>
+                                  <div>
+                                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                      {equipment.tag}
+                                      <span className="px-3 py-1 bg-white text-gray-700 text-sm font-semibold rounded-full border border-gray-300">
+                                        {template.type}
+                                      </span>
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {equipment.size} • {equipment.complexity} • {equipDeliverables.length} deliverables
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-3xl font-bold text-blue-600">{equipTotal}h</div>
+                                  <div className="text-xs text-gray-500">Equipment Total</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Deliverables Table */}
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left">
+                                      <input
+                                        type="checkbox"
+                                        checked={equipDeliverables.length > 0 && equipDeliverables.every(d => selectedDeliverableIds.has(d.id))}
+                                        onChange={() => handleToggleAllDeliverables(equipDeliverables.map(d => d.id))}
+                                        className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                      />
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Deliverable
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Discipline
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Dependencies
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Issue States
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Hours
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                      Actions
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {equipDeliverables.map((deliv, idx) => {
+                                    if (idx === 0) {
+                                      console.log('Sample deliverable:', deliv);
+                                      console.log('All deliverable IDs for this equipment:', equipDeliverables.map(d => d.id));
+                                    }
+                                    return (
+                                    <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                                      <td className="px-4 py-4">
+                                        <input
+                                          type="checkbox"
+                                          checked={selectedDeliverableIds.has(deliv.id)}
+                                          onChange={() => handleToggleDeliverable(deliv.id)}
+                                          className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                        />
+                                      </td>
+                                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                        {deliv.name}
+                                      </td>
+                                      <td className="px-6 py-4 text-sm text-gray-600">
+                                        {deliv.discipline ? (
+                                          <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium">
+                                            {deliv.discipline}
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-medium">
+                                            Missing
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 text-center">
+                                        {deliv.dependencies && deliv.dependencies.length > 0 ? (
+                                          <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                            {deliv.dependencies.length} dep{deliv.dependencies.length > 1 ? 's' : ''}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">None</span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 text-center">
+                                        {deliv.issue_states && deliv.issue_states.length > 0 ? (
+                                          <span className="text-xs text-gray-600">
+                                            {deliv.issue_states.join(' → ')}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">Not configured</span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 text-sm text-right font-bold text-gray-900">
+                                        {deliv.base_hours}h
+                                      </td>
+                                      <td className="px-6 py-4 text-right">
+                                        <button
+                                          onClick={() => setConfigDeliverable(deliv)}
+                                          className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                        >
+                                          ⚙️ Configure
+                                        </button>
+                                      </td>
+                                    </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      // Group by Category (traditional projects)
+                      (() => {
+                        // Group deliverables by category
+                        const grouped = deliverables.reduce((acc, deliv) => {
+                          const cat = deliv.category || 'Uncategorized';
+                          if (!acc[cat]) acc[cat] = [];
+                          acc[cat].push(deliv);
+                          return acc;
+                        }, {} as Record<string, any[]>);
+
+                        return Object.entries(grouped).map(([category, categoryDelivs]) => {
+                          const categoryTotal = categoryDelivs.reduce((sum, d) => sum + (d.base_hours || d.adjusted_hours || 0), 0);
+
+                          return (
+                            <div key={category} className="bg-white rounded-lg shadow border-2 border-gray-200 overflow-hidden">
+                              {/* Category Header */}
+                              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-3 border-b-2 border-gray-200">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="text-lg font-bold text-gray-900">{category}</h3>
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                      {categoryDelivs.length} deliverable{categoryDelivs.length > 1 ? 's' : ''}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-blue-600">{categoryTotal}h</div>
+                                    <div className="text-xs text-gray-500">Category Total</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Deliverables Table */}
+                              <div className="overflow-x-auto">
+                                <table className="w-full">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-4 py-3 text-left">
+                                        <input
+                                          type="checkbox"
+                                          checked={categoryDelivs.length > 0 && categoryDelivs.every(d => selectedDeliverableIds.has(d.id))}
+                                          onChange={() => handleToggleAllDeliverables(categoryDelivs.map(d => d.id))}
+                                          className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                        />
+                                      </th>
+                                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Deliverable
+                                      </th>
+                                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Discipline
+                                      </th>
+                                      <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Dependencies
+                                      </th>
+                                      <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Issue States
+                                      </th>
+                                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Hours
+                                      </th>
+                                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                        Actions
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-200">
+                                    {categoryDelivs.map((deliv, idx) => (
+                                      <tr key={idx} className="hover:bg-blue-50 transition-colors">
+                                        <td className="px-4 py-4">
+                                          <input
+                                            type="checkbox"
+                                            checked={selectedDeliverableIds.has(deliv.id)}
+                                            onChange={() => handleToggleDeliverable(deliv.id)}
+                                            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                                          />
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                          {deliv.name}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                          <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium">
+                                            {deliv.discipline}
+                                          </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                          {deliv.dependencies && deliv.dependencies.length > 0 ? (
+                                            <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                              {deliv.dependencies.length} dep{deliv.dependencies.length > 1 ? 's' : ''}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-gray-400">None</span>
+                                          )}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                          {deliv.issue_states && deliv.issue_states.length > 0 ? (
+                                            <span className="text-xs text-gray-600">
+                                              {deliv.issue_states.join(' → ')}
+                                            </span>
+                                          ) : (
+                                            <span className="text-xs text-gray-400">Not configured</span>
+                                          )}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-right font-bold text-gray-900">
+                                          {deliv.base_hours || deliv.adjusted_hours || 0}h
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                          <button
+                                            onClick={() => setConfigDeliverable(deliv)}
+                                            className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                          >
+                                            ⚙️ Configure
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()
+                    )}
+                  </div>
+
+                  {/* Summary Card */}
+                  <div className="bg-white rounded-lg shadow-lg border-2 border-blue-200 p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Breakdown by Discipline</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {Object.entries(
+                        deliverables.reduce((acc, d) => {
+                          acc[d.discipline] = (acc[d.discipline] || 0) + d.base_hours;
+                          return acc;
+                        }, {} as Record<string, number>)
+                      ).sort((a, b) => b[1] - a[1]).map(([discipline, hours]) => {
+                        const percentage = ((hours / deliverablesTotal) * 100).toFixed(1);
+                        return (
+                          <div key={discipline} className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200">
+                            <div className="text-xs font-medium text-gray-600 mb-1">{discipline}</div>
+                            <div className="text-2xl font-bold text-blue-600">{hours}h</div>
+                            <div className="text-xs text-gray-500 mt-1">{percentage}% of total</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Total Summary */}
+                    <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-sm text-gray-600">Project Totals</div>
+                          <div className="text-2xl font-bold text-gray-900 mt-1">
+                            {equipmentList.length} Equipment • {deliverables.length} Deliverables
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-600">Total Estimated Hours</div>
+                          <div className="text-4xl font-bold text-blue-600 mt-1">{deliverablesTotal}h</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // Traditional template-based view
+                <div className="bg-white rounded-lg shadow p-0">
+                  <DeliverablesMatrix
+                    projectSize={projectSize}
+                    discipline={project?.discipline || 'MULTIDISCIPLINE'}
+                    selectedDisciplines={selectedDisciplines}
+                    projectTeam={projectTeam}
+                    onLoadTemplate={(templateDeliverables) => {
+                      // Ensure each deliverable has an ID
+                      const deliverablesWithIds = templateDeliverables.map((d, idx) => ({
+                        ...d,
+                        id: d.id || `deliv-template-${idx}-${d.name.replace(/\s+/g, '-')}`,
+                      }));
+                      setDeliverables(deliverablesWithIds);
+                      setDeliverablesLoaded(true);
+                      const total = deliverablesWithIds.reduce((sum, d) => sum + (d.adjusted_hours || d.base_hours || 0), 0);
+                      setDeliverablesTotal(total);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Navigation */}
               <div className="flex justify-between">
                 <button
-                  onClick={() => setCurrentStep('setup')}
+                  onClick={() => setCurrentStep(useEquipmentMode ? 'equipment' : 'setup')}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  ← Back to Setup
+                  ← Back to {useEquipmentMode ? 'Equipment' : 'Setup'}
                 </button>
                 <button
                   onClick={() => setCurrentStep('wbs')}
@@ -769,6 +1637,8 @@ export default function ProjectEstimation() {
               contingency_percent: contingency,
               overhead_percent: overhead,
               selected_disciplines: selectedDisciplines,
+              company_id: selectedCompanyId || undefined,
+              rate_sheet_id: selectedRateSheetId || undefined,
             }}
             onSaved={(newProject) => {
               setProject(newProject);
@@ -788,6 +1658,55 @@ export default function ProjectEstimation() {
             }}
           />
         )}
+
+        {/* Add Equipment Modal */}
+        <AddEquipmentModal
+          isOpen={showAddEquipmentModal}
+          onClose={() => setShowAddEquipmentModal(false)}
+          onAdd={(equipment) => {
+            setEquipmentList([...equipmentList, equipment]);
+          }}
+        />
+
+        {/* Add Deliverable Modal */}
+        <AddDeliverableModal
+          isOpen={showAddDeliverableModal}
+          onClose={() => setShowAddDeliverableModal(false)}
+          existingDeliverables={deliverables}
+          onAdd={(deliverable) => {
+            setDeliverables([...deliverables, deliverable]);
+            setDeliverablesTotal(deliverablesTotal + deliverable.base_hours);
+          }}
+        />
+
+        {/* Deliverable Configuration Modal */}
+        {configDeliverable && (
+          <DeliverableConfigModal
+            isOpen={!!configDeliverable}
+            deliverable={configDeliverable}
+            allDeliverables={deliverables}
+            onClose={() => setConfigDeliverable(null)}
+            onSave={handleSaveDeliverableConfig}
+          />
+        )}
+
+        {/* Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={showConfirmDialog}
+          title="Remove Discipline"
+          message={`Are you sure you want to remove ${disciplineToRemove}? This will clear all estimation data for this discipline.`}
+          onConfirm={() => {
+            if (disciplineToRemove) {
+              setSelectedDisciplines(selectedDisciplines.filter(d => d !== disciplineToRemove));
+              setShowConfirmDialog(false);
+              setDisciplineToRemove(null);
+            }
+          }}
+          onCancel={() => {
+            setShowConfirmDialog(false);
+            setDisciplineToRemove(null);
+          }}
+        />
       </div>
     </div>
   );
@@ -983,6 +1902,46 @@ function LoadProjectModal({ onClose, onLoad }: LoadProjectModalProps) {
             className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
           >
             Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Confirmation Dialog Component
+function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">{title}</h3>
+        <p className="text-gray-700 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+          >
+            Remove
           </button>
         </div>
       </div>

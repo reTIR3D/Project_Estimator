@@ -24,7 +24,7 @@ class ProjectBase(BaseSchema):
     """Base project schema."""
 
     # Work type
-    work_type: WorkType = Field(default=WorkType.DISCRETE_PROJECT)
+    work_type: WorkType = Field(default=WorkType.CONVENTIONAL)
 
     # Basic information
     name: str = Field(..., min_length=1, max_length=255)
@@ -65,6 +65,10 @@ class ProjectBase(BaseSchema):
 
     selected_disciplines: list[str] = Field(default_factory=list)
 
+    # Equipment-driven estimation
+    equipment_list: list = Field(default_factory=list)
+    deliverables_config: list = Field(default_factory=list)
+
 
 class ProjectCreate(ProjectBase):
     """Schema for creating a project."""
@@ -95,6 +99,8 @@ class ProjectUpdate(BaseSchema):
     phase_completion: Optional[dict] = None
     gate_approvals: Optional[dict] = None
     selected_disciplines: Optional[list[str]] = None
+    equipment_list: Optional[list] = None
+    deliverables_config: Optional[list] = None
 
 
 class Project(BaseDBSchema, ProjectBase):

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { industriesApi, companiesApi, rateSheetsApi } from '../services/api';
 import type { Industry, Company, RateSheet, RateEntry, IndustryCreate, CompanyCreate, RateSheetCreate } from '../types';
+import Dialog, { useDialog } from '../components/Dialog';
 
 export default function ClientManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { dialogState, showSuccess, showError, showConfirm, closeDialog, handleConfirm } = useDialog();
 
   // State
   const [industries, setIndustries] = useState<Industry[]>([]);
@@ -20,6 +23,9 @@ export default function ClientManagement() {
   const [showEditCompany, setShowEditCompany] = useState(false);
   const [showAddRateSheet, setShowAddRateSheet] = useState(false);
   const [showEditRates, setShowEditRates] = useState(false);
+  const [showCopyRates, setShowCopyRates] = useState(false);
+  const [showOverwriteWarning, setShowOverwriteWarning] = useState(false);
+  const [pendingCopy, setPendingCopy] = useState<{ companyId: string; rateSheetId: string } | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,6 +51,19 @@ export default function ClientManagement() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Handle incoming navigation state (e.g., from ProjectEstimation)
+  useEffect(() => {
+    const state = location.state as { companyId?: string; returnTo?: string; returnLabel?: string } | null;
+    if (state?.companyId && allCompanies.length > 0) {
+      const company = allCompanies.find(c => c.id === state.companyId);
+      if (company) {
+        setSelectedCompany(company);
+        setShowAddRateSheet(true);
+      }
+      // Don't clear the state - we need returnTo and returnLabel for navigation
+    }
+  }, [location.state, allCompanies]);
 
   useEffect(() => {
     if (selectedCompany) {
@@ -121,7 +140,7 @@ export default function ClientManagement() {
       loadData();
     } catch (error) {
       console.error('Failed to create company:', error);
-      alert('Failed to create company');
+      showError('Failed to Create Company', 'An error occurred while creating the company. Please try again.');
     }
   };
 
@@ -162,7 +181,7 @@ export default function ClientManagement() {
       await loadData();
     } catch (error) {
       console.error('Failed to update company:', error);
-      alert('Failed to update company');
+      showError('Failed to Update Company', 'An error occurred while updating the company. Please try again.');
     }
   };
 
@@ -180,7 +199,7 @@ export default function ClientManagement() {
       loadRateSheets(selectedCompany.id);
     } catch (error) {
       console.error('Failed to create rate sheet:', error);
-      alert('Failed to create rate sheet');
+      showError('Failed to Create Rate Sheet', 'An error occurred while creating the rate sheet. Please try again.');
     }
   };
 
@@ -192,7 +211,7 @@ export default function ClientManagement() {
       }
     } catch (error) {
       console.error('Failed to set default:', error);
-      alert('Failed to set default rate sheet');
+      showError('Failed to Set Default', 'An error occurred while setting the default rate sheet. Please try again.');
     }
   };
 
@@ -232,8 +251,58 @@ export default function ClientManagement() {
       }
     } catch (error) {
       console.error('Failed to update rates:', error);
-      alert('Failed to update rates');
+      showError('Failed to Update Rates', 'An error occurred while updating the rates. Please try again.');
     }
+  };
+
+  const handleCopyRatesFrom = async (sourceCompanyId: string, sourceRateSheetId: string) => {
+    // Check if there are existing rates
+    if (editingRateEntries.length > 0) {
+      // Show warning dialog
+      setPendingCopy({ companyId: sourceCompanyId, rateSheetId: sourceRateSheetId });
+      setShowOverwriteWarning(true);
+    } else {
+      // No existing rates, proceed directly
+      await executeCopyRates(sourceCompanyId, sourceRateSheetId);
+    }
+  };
+
+  const executeCopyRates = async (sourceCompanyId: string, sourceRateSheetId: string) => {
+    try {
+      const sourceRateSheet = await rateSheetsApi.get(sourceRateSheetId);
+
+      // Copy rate entries from source
+      if (sourceRateSheet.rate_entries && sourceRateSheet.rate_entries.length > 0) {
+        setEditingRateEntries([...sourceRateSheet.rate_entries]);
+      } else if (sourceRateSheet.rates) {
+        // Fallback to old format
+        const entries = Object.entries(sourceRateSheet.rates).map(([role, rate]) => ({
+          role,
+          discipline: '',
+          rate
+        }));
+        setEditingRateEntries(entries);
+      }
+
+      setShowCopyRates(false);
+      showSuccess('Rates Copied Successfully', `Rates copied from ${sourceRateSheet.name}!\n\nDon't forget to click Save to persist these changes.`);
+    } catch (error) {
+      console.error('Failed to copy rates:', error);
+      showError('Failed to Copy Rates', 'An error occurred while copying the rates. Please try again.');
+    }
+  };
+
+  const handleConfirmOverwrite = async () => {
+    if (pendingCopy) {
+      await executeCopyRates(pendingCopy.companyId, pendingCopy.rateSheetId);
+      setPendingCopy(null);
+      setShowOverwriteWarning(false);
+    }
+  };
+
+  const handleCancelOverwrite = () => {
+    setPendingCopy(null);
+    setShowOverwriteWarning(false);
   };
 
   const DISCIPLINES = [
@@ -292,7 +361,7 @@ export default function ClientManagement() {
         setPendingCompanyChange(null);
       } catch (error) {
         console.error('Failed to save rate sheet:', error);
-        alert('Failed to save rate sheet');
+        showError('Failed to Save Rate Sheet', 'An error occurred while saving the rate sheet. Please try again.');
       }
     }
   };
@@ -328,7 +397,7 @@ export default function ClientManagement() {
         navigate(pendingNavigation);
       } catch (error) {
         console.error('Failed to save rate sheet:', error);
-        alert('Failed to save rate sheet');
+        showError('Failed to Save Rate Sheet', 'An error occurred while saving the rate sheet. Please try again.');
       }
     }
   };
@@ -429,15 +498,40 @@ export default function ClientManagement() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <button
-                onClick={() => handleNavigate('/')}
-                className="text-blue-600 hover:text-blue-800 text-sm mb-2"
-              >
-                ← Back to Dashboard
-              </button>
+              {/* Breadcrumb navigation */}
+              <div className="flex items-center gap-2 text-sm mb-2">
+                <button
+                  onClick={() => handleNavigate('/')}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Dashboard
+                </button>
+                {location.state?.returnTo && (
+                  <>
+                    <span className="text-gray-400">›</span>
+                    <button
+                      onClick={() => navigate(location.state.returnTo)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      {location.state.returnLabel || 'Project'}
+                    </button>
+                    <span className="text-gray-400">›</span>
+                    <span className="text-gray-600">Client Management</span>
+                  </>
+                )}
+              </div>
               <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
               <p className="text-sm text-gray-600 mt-1">Manage industries, clients, and rate sheets</p>
             </div>
+            {/* Return button for quick access */}
+            {location.state?.returnTo && (
+              <button
+                onClick={() => navigate(location.state.returnTo)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors shadow-sm"
+              >
+                ← Return to {location.state.returnLabel || 'Project'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -569,14 +663,14 @@ export default function ClientManagement() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">
-                    {showEditRates && selectedRateSheet
-                      ? `Edit Rates: ${selectedRateSheet.name}`
+                    {showEditRates && selectedRateSheet && selectedCompany
+                      ? `${selectedCompany.name}: Edit Rates`
                       : selectedCompany ? `${selectedCompany.name} Rate Sheets` : 'Rate Sheets'
                     }
                   </h2>
                   <p className="text-xs text-gray-600 mt-0.5">
-                    {showEditRates
-                      ? 'Update billing rates for different roles'
+                    {showEditRates && selectedRateSheet
+                      ? selectedRateSheet.name
                       : selectedCompany ? 'Manage billing rates for different scenarios' : 'Select a client first'
                     }
                   </p>
@@ -591,6 +685,12 @@ export default function ClientManagement() {
                       className="text-sm bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 shadow-sm transition"
                     >
                       ← Back
+                    </button>
+                    <button
+                      onClick={() => setShowCopyRates(true)}
+                      className="text-xs bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 shadow-sm transition"
+                    >
+                      📥 Import
                     </button>
                     <button
                       onClick={handleSaveRates}
@@ -1160,6 +1260,196 @@ export default function ClientManagement() {
         </div>
       )}
 
+      {/* Copy Rates Modal */}
+      {showCopyRates && (
+        <CopyRatesModal
+          companies={allCompanies}
+          onClose={() => setShowCopyRates(false)}
+          onCopy={handleCopyRatesFrom}
+        />
+      )}
+
+      {/* Overwrite Warning Modal */}
+      {showOverwriteWarning && (
+        <OverwriteWarningModal
+          onConfirm={handleConfirmOverwrite}
+          onCancel={handleCancelOverwrite}
+          existingEntriesCount={editingRateEntries.length}
+        />
+      )}
+
+      {/* Dialog Component */}
+      <Dialog
+        isOpen={dialogState.isOpen}
+        type={dialogState.type}
+        title={dialogState.title}
+        message={dialogState.message}
+        onClose={closeDialog}
+        onConfirm={dialogState.onConfirm ? handleConfirm : undefined}
+        confirmText={dialogState.confirmText}
+        cancelText={dialogState.cancelText}
+      />
+
+    </div>
+  );
+}
+
+// Copy Rates Modal Component
+function CopyRatesModal({
+  companies,
+  onClose,
+  onCopy,
+}: {
+  companies: Company[];
+  onClose: () => void;
+  onCopy: (companyId: string, rateSheetId: string) => void;
+}) {
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
+  const [selectedRateSheetId, setSelectedRateSheetId] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadRateSheets = async () => {
+      if (selectedCompanyId) {
+        try {
+          setLoading(true);
+          const sheets = await rateSheetsApi.list(selectedCompanyId, true);
+          setRateSheets(sheets);
+          if (sheets.length > 0) {
+            setSelectedRateSheetId(sheets[0].id);
+          }
+        } catch (error) {
+          console.error('Failed to load rate sheets:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setRateSheets([]);
+        setSelectedRateSheetId('');
+      }
+    };
+    loadRateSheets();
+  }, [selectedCompanyId]);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Copy Rates from Customer</h3>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Customer
+            </label>
+            <select
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              className="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">-- Select Customer --</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedCompanyId && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Rate Sheet
+              </label>
+              {loading ? (
+                <div className="p-2 text-gray-500 text-sm">Loading rate sheets...</div>
+              ) : rateSheets.length === 0 ? (
+                <div className="p-2 bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm rounded-lg">
+                  No rate sheets available for this customer
+                </div>
+              ) : (
+                <select
+                  value={selectedRateSheetId}
+                  onChange={(e) => setSelectedRateSheetId(e.target.value)}
+                  className="w-full p-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                >
+                  {rateSheets.map((sheet) => (
+                    <option key={sheet.id} value={sheet.id}>
+                      {sheet.name} {sheet.is_default ? '(Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              if (selectedCompanyId && selectedRateSheetId) {
+                onCopy(selectedCompanyId, selectedRateSheetId);
+              }
+            }}
+            disabled={!selectedCompanyId || !selectedRateSheetId}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            Copy Rates
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Overwrite Warning Modal Component
+function OverwriteWarningModal({
+  onConfirm,
+  onCancel,
+  existingEntriesCount,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  existingEntriesCount: number;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full mx-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">Overwrite Existing Rates?</h3>
+        </div>
+
+        <p className="text-gray-700 mb-2">
+          This rate sheet currently has <span className="font-bold text-red-600">{existingEntriesCount} existing rate {existingEntriesCount === 1 ? 'entry' : 'entries'}</span>.
+        </p>
+        <p className="text-gray-700 mb-6">
+          Importing will <span className="font-bold">replace all current rates</span> with the imported data. This action cannot be undone unless you don't save.
+        </p>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold"
+          >
+            Yes, Overwrite
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

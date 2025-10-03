@@ -11,7 +11,8 @@ from app.models.base import Base
 class WorkType(str, enum.Enum):
     """Top-level work type classification."""
 
-    DISCRETE_PROJECT = "DISCRETE_PROJECT"  # One-time project with defined scope
+    CONVENTIONAL = "CONVENTIONAL"  # Standard single-phase project
+    PHASE_GATE = "PHASE_GATE"  # Multi-phase project with stage gates
     CAMPAIGN = "CAMPAIGN"  # Ongoing engineering support/retainer
 
 
@@ -94,7 +95,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     # Work type classification
-    work_type = Column(Enum(WorkType), default=WorkType.DISCRETE_PROJECT, nullable=False, index=True)
+    work_type = Column(Enum(WorkType), default=WorkType.CONVENTIONAL, nullable=False, index=True)
 
     # Basic information
     name = Column(String(255), nullable=False, index=True)
@@ -138,6 +139,10 @@ class Project(Base):
 
     # Selected disciplines for multi-discipline projects (stored as JSON array)
     selected_disciplines = Column(JSON, default=[])
+
+    # Equipment-driven estimation (stored as JSON arrays)
+    equipment_list = Column(JSON, default=[])  # List of equipment with size/complexity
+    deliverables_config = Column(JSON, default=[])  # Deliverables with dependencies/issue states
 
     # Complexity factors (stored as JSON)
     complexity_factors = Column(JSON, default={})

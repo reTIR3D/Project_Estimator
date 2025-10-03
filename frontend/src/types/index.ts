@@ -1,6 +1,7 @@
 // API Types matching backend schemas
 
-export type ProjectSize = 'SMALL' | 'MEDIUM' | 'LARGE' | 'PHASE_GATE';
+export type ProjectSize = 'SMALL' | 'MEDIUM' | 'LARGE';
+export type WorkType = 'CONVENTIONAL' | 'PHASE_GATE' | 'CAMPAIGN';
 export type ProjectType = 'STANDARD';
 export type ProjectPhase = 'FRAME' | 'SCREEN' | 'REFINE' | 'IMPLEMENT';
 export type ClientProfile = 'TYPE_A' | 'TYPE_B' | 'TYPE_C' | 'NEW_CLIENT';
@@ -26,6 +27,7 @@ export interface Project {
   project_code?: string;
   description?: string;
   size: ProjectSize;
+  work_type: WorkType;
   discipline: string;
   project_type: ProjectType;
   parent_project_id?: string;
@@ -51,6 +53,12 @@ export interface Project {
   created_at: string;
   updated_at?: string;
   overhead_percent?: number;
+  // Campaign-specific fields
+  campaign_duration_months?: number;
+  campaign_service_level?: string;
+  campaign_site_count?: number;
+  campaign_response_requirement?: string;
+  campaign_pricing_model?: string;
 }
 
 export interface EstimationRequest {
@@ -94,6 +102,7 @@ export interface ProjectCreate {
   project_code?: string;
   description?: string;
   size: ProjectSize;
+  work_type: WorkType;
   discipline: string;
   project_type?: ProjectType;
   parent_project_id?: string;
@@ -331,4 +340,53 @@ export interface RateSheetClone {
   new_name: string;
   target_company_id?: string;
   new_description?: string;
+}
+
+// Equipment-Driven Estimation Types
+export type EquipmentSize = 'small' | 'medium' | 'large';
+export type EquipmentComplexity = 'simple' | 'standard' | 'complex';
+export type EquipmentTemplateKey = 'vessel' | 'pump' | 'heat_exchanger' | 'tank' | 'compressor';
+export type IssueState = 'IFD' | 'IFR' | 'IFA' | 'IFB' | 'IFC' | 'IFI' | 'IFP' | 'IFM';
+
+export interface Equipment {
+  id: string;
+  tag: string; // e.g., V-101, P-205A
+  templateKey: EquipmentTemplateKey;
+  size: EquipmentSize;
+  complexity: EquipmentComplexity;
+}
+
+export interface EquipmentDeliverableTemplate {
+  name: string;
+  discipline: string;
+  baseHours: number;
+}
+
+export interface EquipmentTemplate {
+  type: string; // Display name
+  icon: string;
+  deliverables: EquipmentDeliverableTemplate[];
+  complexityFactors: {
+    simple: number;
+    standard: number;
+    complex: number;
+  };
+  sizeFactors: {
+    small: number;
+    medium: number;
+    large: number;
+  };
+}
+
+// Deliverable Dependency & Configuration Types
+export interface DeliverableDependency {
+  deliverable_id: string;
+  dependency_type: 'prerequisite' | 'corequisite'; // prerequisite must finish before, corequisite can run in parallel
+}
+
+export interface DeliverableConfig {
+  issue_states: IssueState[];
+  review_cycles: number;
+  rework_factor: number;
+  dependencies: DeliverableDependency[];
 }

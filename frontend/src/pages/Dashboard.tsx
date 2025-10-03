@@ -14,6 +14,11 @@ export default function Dashboard() {
   const [companiesMap, setCompaniesMap] = useState<Map<string, Company>>(new Map());
   const [rateSheetsMap, setRateSheetsMap] = useState<Map<string, RateSheet>>(new Map());
 
+  // Filter and sort state
+  const [filterWorkType, setFilterWorkType] = useState<string>('ALL');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [sortBy, setSortBy] = useState<string>('created_desc');
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -82,6 +87,41 @@ export default function Dashboard() {
     return colors[status as keyof typeof colors] || colors.DRAFT;
   };
 
+  // Filter and sort projects
+  const filteredAndSortedProjects = React.useMemo(() => {
+    let filtered = [...projects];
+
+    // Apply work type filter
+    if (filterWorkType !== 'ALL') {
+      filtered = filtered.filter(p => p.work_type === filterWorkType);
+    }
+
+    // Apply status filter
+    if (filterStatus !== 'ALL') {
+      filtered = filtered.filter(p => p.status === filterStatus);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'name_desc':
+          return b.name.localeCompare(a.name);
+        case 'created_asc':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'created_desc':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'updated_desc':
+          return new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [projects, filterWorkType, filterStatus, sortBy]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -148,193 +188,274 @@ export default function Dashboard() {
             >
               Size Settings
             </button>
+
+            {/* Prototype Section */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Experimental</h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate('/integrated-prototype')}
+                  className="w-full text-left px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 font-semibold transition-colors shadow-lg border-2 border-green-400"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>⭐</span>
+                    <div>
+                      <div className="font-bold text-lg">Complete Workflow</div>
+                      <div className="text-xs opacity-90">Equipment + Deliverables + Review</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => navigate('/equipment-prototype')}
+                  className="w-full text-left px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 font-semibold transition-colors shadow-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>⚙️</span>
+                    <div>
+                      <div className="font-bold">Equipment Builder</div>
+                      <div className="text-xs opacity-90">Equipment → Deliverables</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => navigate('/deliverables-prototype')}
+                  className="w-full text-left px-4 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg hover:from-orange-600 hover:to-pink-600 font-semibold transition-colors shadow-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>🧪</span>
+                    <div>
+                      <div className="font-bold">Deliverables Config</div>
+                      <div className="text-xs opacity-90">Issue States & Review Cycles</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
 
-        {/* Projects Grid */}
+        {/* Projects List */}
         <div className="flex-1 px-4 py-8">
-        {projects.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="text-gray-400 text-6xl mb-4">📊</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No projects yet</h3>
-            <p className="text-gray-600 mb-6">Create your first project to get started</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-            >
-              Create Project
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                onClick={() => navigate(`/project/${project.id}`)}
-                className="bg-white rounded-lg shadow hover:shadow-xl transition-shadow cursor-pointer p-6"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900">{project.name}</h3>
-                    <div className="flex gap-2 mt-1">
-                      {project.size === 'PHASE_GATE' && (
-                        <span className="inline-block px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 text-xs font-semibold rounded">
-                          🎯 Phase-Gate
-                        </span>
-                      )}
-                      {project.current_phase && (
-                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                          {project.current_phase}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                      project.status
-                    )}`}
-                  >
-                    {project.status}
-                  </span>
-                </div>
+          {/* Filters and Sort Controls */}
+          <div className="bg-white rounded-lg shadow p-4 mb-6">
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Structure Type</label>
+                <select
+                  value={filterWorkType}
+                  onChange={(e) => setFilterWorkType(e.target.value)}
+                  className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                >
+                  <option value="ALL">All Structures</option>
+                  <option value="CONVENTIONAL">📊 Conventional</option>
+                  <option value="PHASE_GATE">🎯 Phase-Gate</option>
+                  <option value="CAMPAIGN">🔄 Campaign</option>
+                </select>
+              </div>
 
-                {project.description && (
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{project.description}</p>
-                )}
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="ESTIMATION">Estimation</option>
+                  <option value="REVIEW">Review</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
 
-                {/* Campaign-specific display */}
-                {project.work_type === 'CAMPAIGN' ? (
-                  <div className="space-y-2 text-sm">
-                    {project.client_name && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Client:</span>
-                        <span className="font-semibold">{project.client_name}</span>
-                      </div>
-                    )}
-                    {project.campaign_duration_months && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Duration:</span>
-                        <span className="font-semibold">{project.campaign_duration_months} months</span>
-                      </div>
-                    )}
-                    {project.campaign_service_level && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Service Level:</span>
-                        <span className="font-semibold capitalize">
-                          {project.campaign_service_level.toLowerCase()}
-                        </span>
-                      </div>
-                    )}
-                    {project.campaign_site_count && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Sites:</span>
-                        <span className="font-semibold">{project.campaign_site_count}</span>
-                      </div>
-                    )}
-                    {project.campaign_response_requirement && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Response Time:</span>
-                        <span className="font-semibold">
-                          {project.campaign_response_requirement.replace('_', ' ')}
-                        </span>
-                      </div>
-                    )}
-                    {project.campaign_pricing_model && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Pricing:</span>
-                        <span className="font-semibold capitalize">
-                          {project.campaign_pricing_model.replace('_', ' ').toLowerCase()}
-                        </span>
-                      </div>
-                    )}
-                    {project.total_hours && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Hours:</span>
-                        <span className="font-semibold">{project.total_hours.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {project.total_cost && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Cost:</span>
-                        <span className="font-semibold">${project.total_cost.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Discrete project display */
-                  <div className="space-y-2 text-sm">
-                    {project.client_name && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Client:</span>
-                        <span className="font-semibold">{project.client_name}</span>
-                      </div>
-                    )}
-                    {project.project_type && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Project Type:</span>
-                        <span className="font-semibold capitalize">
-                          {project.project_type.replace('_', ' ')}
-                        </span>
-                      </div>
-                    )}
-                    {project.size && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Size:</span>
-                        <span className="font-semibold capitalize">{project.size.toLowerCase()}</span>
-                      </div>
-                    )}
-                    {project.process_type && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Process:</span>
-                        <span className="font-semibold capitalize">
-                          {project.process_type.replace('_', '-')}
-                        </span>
-                      </div>
-                    )}
-                    {project.rate_sheet_id && rateSheetsMap.get(project.rate_sheet_id) && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Rate Sheet:</span>
-                        <span className="font-semibold">{rateSheetsMap.get(project.rate_sheet_id)!.name}</span>
-                      </div>
-                    )}
-                    {project.total_hours && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Hours:</span>
-                        <span className="font-semibold">{project.total_hours.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {project.duration_weeks && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Duration:</span>
-                        <span className="font-semibold">{project.duration_weeks} weeks</span>
-                      </div>
-                    )}
-                    {project.total_cost && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Cost:</span>
-                        <span className="font-semibold">${project.total_cost.toLocaleString()}</span>
-                      </div>
-                    )}
-                    {project.confidence_level && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Confidence:</span>
-                        <span className="font-semibold capitalize">
-                          {project.confidence_level.replace('_', ' ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full p-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                >
+                  <option value="created_desc">Newest First</option>
+                  <option value="created_asc">Oldest First</option>
+                  <option value="updated_desc">Recently Updated</option>
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="name_desc">Name (Z-A)</option>
+                </select>
+              </div>
 
-                <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-                  Created {new Date(project.created_at).toLocaleDateString()}
+              <div className="flex items-end">
+                <div className="text-sm text-gray-600 font-semibold">
+                  {filteredAndSortedProjects.length} {filteredAndSortedProjects.length === 1 ? 'project' : 'projects'}
                 </div>
               </div>
-            ))}
+            </div>
+          </div>
+
+        {filteredAndSortedProjects.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-gray-400 text-6xl mb-4">📊</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              {projects.length === 0 ? 'No projects yet' : 'No projects match your filters'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {projects.length === 0 ? 'Create your first project to get started' : 'Try adjusting your filters'}
+            </p>
+            {projects.length === 0 && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+              >
+                Create Project
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredAndSortedProjects.map((project) => {
+              // Determine card styling based on work type
+              const getCardStyle = () => {
+                switch (project.work_type) {
+                  case 'PHASE_GATE':
+                    return {
+                      bg: 'bg-gradient-to-br from-indigo-50 to-purple-50',
+                      border: 'border-2 border-indigo-200',
+                      icon: '🎯',
+                      label: 'Phase-Gate Structure',
+                      labelColor: 'text-indigo-700 bg-indigo-100'
+                    };
+                  case 'CAMPAIGN':
+                    return {
+                      bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
+                      border: 'border-2 border-purple-200',
+                      icon: '🔄',
+                      label: 'Campaign Structure',
+                      labelColor: 'text-purple-700 bg-purple-100'
+                    };
+                  default: // CONVENTIONAL
+                    return {
+                      bg: 'bg-gradient-to-br from-blue-50 to-cyan-50',
+                      border: 'border-2 border-blue-200',
+                      icon: '📊',
+                      label: 'Conventional Structure',
+                      labelColor: 'text-blue-700 bg-blue-100'
+                    };
+                }
+              };
+
+              const cardStyle = getCardStyle();
+
+              return (
+                <div
+                  key={project.id}
+                  onClick={() => {
+                    if (project.work_type === 'CAMPAIGN') {
+                      navigate(`/campaign/${project.id}`);
+                    } else {
+                      navigate(`/project/${project.id}`);
+                    }
+                  }}
+                  className={`${cardStyle.bg} ${cardStyle.border} rounded-lg shadow hover:shadow-lg transition-all cursor-pointer p-4 relative overflow-hidden`}
+                >
+                  {/* Large icon badge - watermark */}
+                  <div className="absolute top-2 right-4 text-6xl opacity-10">
+                    {cardStyle.icon}
+                  </div>
+
+                  <div className="flex items-center gap-4 relative z-10">
+                    {/* Left: Icon Badge */}
+                    <div className="flex-shrink-0">
+                      <div className={`w-16 h-16 rounded-lg ${cardStyle.labelColor} flex items-center justify-center text-3xl`}>
+                        {cardStyle.icon}
+                      </div>
+                    </div>
+
+                    {/* Center: Project Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-lg font-bold text-gray-900 truncate">{project.name}</h3>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${getStatusColor(
+                            project.status
+                          )}`}
+                        >
+                          {project.status}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-sm text-gray-600">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${cardStyle.labelColor}`}>
+                          {cardStyle.label}
+                        </span>
+                        {project.current_phase && (
+                          <span className="px-2 py-0.5 bg-white/70 border border-gray-300 rounded text-xs font-semibold">
+                            {project.current_phase}
+                          </span>
+                        )}
+                        {project.client_name && (
+                          <span className="text-xs">Client: <span className="font-semibold">{project.client_name}</span></span>
+                        )}
+                      </div>
+
+                      {project.description && (
+                        <p className="text-sm text-gray-600 mt-1 line-clamp-1">{project.description}</p>
+                      )}
+                    </div>
+
+                    {/* Right: Key Metrics */}
+                    <div className="flex-shrink-0 flex items-center gap-6 text-sm">
+                      {project.work_type === 'CAMPAIGN' ? (
+                        <>
+                          {project.campaign_site_count && (
+                            <div className="text-center">
+                              <div className="text-gray-500 text-xs">Sites</div>
+                              <div className="font-bold text-gray-900">{project.campaign_site_count}</div>
+                            </div>
+                          )}
+                          {project.campaign_duration_months && (
+                            <div className="text-center">
+                              <div className="text-gray-500 text-xs">Duration</div>
+                              <div className="font-bold text-gray-900">{project.campaign_duration_months}mo</div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {project.size && (
+                            <div className="text-center">
+                              <div className="text-gray-500 text-xs">Size</div>
+                              <div className="font-bold text-gray-900 capitalize">{project.size.toLowerCase()}</div>
+                            </div>
+                          )}
+                          {project.duration_weeks && (
+                            <div className="text-center">
+                              <div className="text-gray-500 text-xs">Duration</div>
+                              <div className="font-bold text-gray-900">{project.duration_weeks}wk</div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {project.total_cost && (
+                        <div className="text-center">
+                          <div className="text-gray-500 text-xs">Cost</div>
+                          <div className="font-bold text-gray-900">${(project.total_cost / 1000).toFixed(0)}k</div>
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <div className="text-gray-500 text-xs">Created</div>
+                        <div className="font-semibold text-gray-700 text-xs">{new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         </div>
       </div>
+
 
       {/* Create Project Modal */}
       {showCreateModal && (
@@ -354,7 +475,7 @@ interface CreateProjectModalProps {
 
 function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
   const [workTypeStep, setWorkTypeStep] = useState(true); // Step 1: Choose work type
-  const [selectedWorkType, setSelectedWorkType] = useState<'DISCRETE_PROJECT' | 'CAMPAIGN' | null>(null);
+  const [selectedWorkType, setSelectedWorkType] = useState<'CONVENTIONAL' | 'PHASE_GATE' | 'CAMPAIGN' | null>(null);
 
   const [formData, setFormData] = useState<ProjectCreate>({
     name: '',
@@ -367,7 +488,7 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
     client_name: '',
     contingency_percent: 15,
     selected_disciplines: [],
-    work_type: 'DISCRETE_PROJECT',
+    work_type: 'CONVENTIONAL',
   });
   const [companies, setCompanies] = useState<Company[]>([]);
   const [rateSheets, setRateSheets] = useState<RateSheet[]>([]);
@@ -417,7 +538,7 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
     onCreate(formData);
   };
 
-  const selectWorkType = (type: 'DISCRETE_PROJECT' | 'CAMPAIGN') => {
+  const selectWorkType = (type: 'CONVENTIONAL' | 'PHASE_GATE' | 'CAMPAIGN') => {
     setSelectedWorkType(type);
     setFormData({ ...formData, work_type: type });
     setWorkTypeStep(false);
@@ -438,9 +559,9 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
   if (workTypeStep) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-3xl w-full mx-4">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-5xl w-full mx-4">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">What type of work are you estimating?</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Choose Project Structure</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
@@ -449,44 +570,64 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            {/* Discrete Project Option */}
+          <div className="grid grid-cols-3 gap-6">
+            {/* Conventional Structure Option */}
             <button
-              onClick={() => selectWorkType('DISCRETE_PROJECT')}
-              className="p-8 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
+              onClick={() => selectWorkType('CONVENTIONAL')}
+              className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group text-left"
             >
-              <div className="text-5xl mb-4">📊</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600">
-                Discrete Project
+              <div className="text-4xl mb-3">📊</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600">
+                Conventional Structure
               </h3>
-              <p className="text-gray-600 text-sm mb-4">
-                One-time project with defined scope, milestones, and deliverables
+              <p className="text-gray-600 text-sm mb-3">
+                Standard project with defined scope and deliverables
               </p>
-              <ul className="text-sm text-gray-500 space-y-2">
+              <ul className="text-xs text-gray-500 space-y-1">
                 <li>• Fixed scope and timeline</li>
                 <li>• Milestone-based planning</li>
-                <li>• Deliverable-focused</li>
-                <li>• Budget tied to project completion</li>
+                <li>• Small, Medium, or Large</li>
+                <li>• Single-phase delivery</li>
               </ul>
             </button>
 
-            {/* Campaign Option */}
+            {/* Phase-Gate Structure Option */}
+            <button
+              onClick={() => selectWorkType('PHASE_GATE')}
+              className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group text-left"
+            >
+              <div className="text-4xl mb-3">🎯</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600">
+                Phase-Gate Structure
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">
+                Complex projects with staged decision gates
+              </p>
+              <ul className="text-xs text-gray-500 space-y-1">
+                <li>• Frame → Screen → Refine → Implement</li>
+                <li>• Stage-gate approvals</li>
+                <li>• Small, Medium, or Large</li>
+                <li>• Progressive accuracy refinement</li>
+              </ul>
+            </button>
+
+            {/* Campaign Structure Option */}
             <button
               onClick={() => selectWorkType('CAMPAIGN')}
-              className="p-8 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group text-left"
+              className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all group text-left"
             >
-              <div className="text-5xl mb-4">🔄</div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-purple-600">
-                Engineering Support Campaign
+              <div className="text-4xl mb-3">🔄</div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-600">
+                Campaign Structure
               </h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Ongoing support with allocated capacity and recurring deliverables
+              <p className="text-gray-600 text-sm mb-3">
+                Multi-site ongoing support campaigns
               </p>
-              <ul className="text-sm text-gray-500 space-y-2">
+              <ul className="text-xs text-gray-500 space-y-1">
                 <li>• Duration-based (monthly/annual)</li>
+                <li>• Multi-team deployment</li>
                 <li>• Capacity allocation model</li>
-                <li>• Mix of reactive & scheduled work</li>
-                <li>• Monthly burn rate pricing</li>
+                <li>• Recurring work patterns</li>
               </ul>
             </button>
           </div>
@@ -609,13 +750,7 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
               <option value="SMALL">Small (&lt; 500h)</option>
               <option value="MEDIUM">Medium (500-2000h)</option>
               <option value="LARGE">Large (&gt; 2000h)</option>
-              <option value="PHASE_GATE">Phase-Gate (Large/Complex with staged approach)</option>
             </select>
-            {formData.size === 'PHASE_GATE' && (
-              <p className="mt-2 text-sm text-purple-600">
-                🎯 Phase-gate projects use Frame → Screen → Refine → Implement workflow
-              </p>
-            )}
           </div>
 
           {/* Disciplines Selection */}
@@ -691,8 +826,8 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
           </div>
 
           {/* Phase Selector - Only for Phase-Gate Projects */}
-          {formData.size === 'PHASE_GATE' && (
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4 border-2 border-purple-200">
+          {selectedWorkType === 'PHASE_GATE' && (
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border-2 border-indigo-200">
               <label className="block text-sm font-semibold text-gray-900 mb-2">
                 Starting Phase *
               </label>
@@ -700,14 +835,14 @@ function CreateProjectModal({ onClose, onCreate }: CreateProjectModalProps) {
                 required
                 value={formData.current_phase || 'FRAME'}
                 onChange={(e) => setFormData({ ...formData, current_phase: e.target.value as any })}
-                className="w-full p-3 border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:outline-none bg-white"
+                className="w-full p-3 border-2 border-indigo-200 rounded-lg focus:border-indigo-500 focus:outline-none bg-white"
               >
                 <option value="FRAME">Frame - Conceptual Design (±50% accuracy)</option>
                 <option value="SCREEN">Screen - Feasibility Study (±30% accuracy)</option>
                 <option value="REFINE">Refine - FEED/Define (±10-15% accuracy)</option>
                 <option value="IMPLEMENT">Implement - Detail Design (Final)</option>
               </select>
-              <p className="mt-2 text-xs text-purple-700">
+              <p className="mt-2 text-xs text-indigo-700">
                 💡 Most projects start at Frame phase. You can advance through phases later.
               </p>
             </div>

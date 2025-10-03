@@ -8,8 +8,21 @@ from sqlalchemy.orm import relationship
 from app.models.base import Base
 
 
+class IssueState(str, enum.Enum):
+    """Issue state for deliverables."""
+
+    IFD = "IFD"  # Issued for Design
+    IFR = "IFR"  # Issued for Review
+    IFA = "IFA"  # Issued for Approval
+    IFB = "IFB"  # Issued for Bid
+    IFC = "IFC"  # Issued for Construction
+    IFI = "IFI"  # Issued for Information
+    IFP = "IFP"  # Issued for Permit
+    IFM = "IFM"  # Issued for Manufacture
+
+
 class Milestone(str, enum.Enum):
-    """Project milestone."""
+    """Project milestone (legacy - use IssueState for new work)."""
 
     IFD = "ifd"  # Issued for Design
     IFH = "ifh"  # Issued for HAZOP
@@ -49,10 +62,22 @@ class Deliverable(Base):
     actual_start = Column(Date)
     actual_end = Column(Date)
 
-    # Dependencies (stored as JSON array of deliverable IDs)
+    # Dependencies (stored as JSON array of objects with deliverable_id and dependency_type)
+    # Example: [{"deliverable_id": "uuid", "dependency_type": "prerequisite"}, ...]
     dependencies = Column(JSON, default=[])
     is_critical_path = Column(Boolean, default=False)
     float_days = Column(Integer, default=0)
+
+    # Equipment-driven estimation fields
+    equipment_id = Column(String(255))  # ID of equipment that generated this deliverable
+    discipline = Column(String(100))  # Engineering discipline
+    base_hours = Column(Integer)  # Base hours before multipliers
+
+    # Issue state configuration (stored as JSON array of state codes)
+    # Example: ["IFR", "IFC"]
+    issue_states = Column(JSON, default=["IFR", "IFC"])
+    review_cycles = Column(Integer, default=1)  # Number of review-rework cycles
+    rework_factor = Column(Integer, default=25)  # Percentage (0-100) of work redone per cycle
 
     # Progress tracking
     progress_percent = Column(Integer, default=0)

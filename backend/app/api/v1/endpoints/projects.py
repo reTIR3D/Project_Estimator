@@ -35,8 +35,8 @@ async def apply_phase_gate_recommendation(
     Returns:
         Updated project data with phase-gate recommendation
     """
-    # Only apply to discrete projects
-    if project_data.get('work_type') != WorkType.DISCRETE_PROJECT:
+    # Only apply to conventional and phase-gate projects (not campaigns)
+    if project_data.get('work_type') == WorkType.CAMPAIGN:
         return project_data
 
     # Get active size settings
