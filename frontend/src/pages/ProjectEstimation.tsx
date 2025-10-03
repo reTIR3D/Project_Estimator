@@ -1,19 +1,18 @@
+// Project Estimation Page - Refactored to 5 clean steps
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { estimationApi, projectsApi, companiesApi, rateSheetsApi } from '../services/api';
 import ComplexityFactors from '../components/ComplexityFactors';
 import EstimationSummary from '../components/EstimationSummary';
 import DeliverablesMatrix from '../components/DeliverablesMatrix';
-import RACIMatrix from '../components/RACIMatrix';
-import WBS from '../components/WBS';
-import CostBreakdown from '../components/CostBreakdown';
 import PhaseGateTracker from '../components/PhaseGateTracker';
 import EstimationStepper, { EstimationStep } from '../components/EstimationStepper';
-import TeamBuilder, { TeamMember } from '../components/TeamBuilder';
+import { TeamMember } from '../components/TeamBuilder';
 import AddEquipmentModal from '../components/AddEquipmentModal';
 import AddDeliverableModal from '../components/AddDeliverableModal';
 import DeliverableConfigModal from '../components/DeliverableConfigModal';
-import ResourcePlanning from '../components/ResourcePlanning';
+import PlanningHub from '../components/PlanningHub';
+import WorkOrganization from '../components/WorkOrganization';
 import type {
   ProjectSize,
   ClientProfile,
@@ -70,6 +69,7 @@ export default function ProjectEstimation() {
 
   // Confirmation dialog state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showEquipmentDisableDialog, setShowEquipmentDisableDialog] = useState(false);
   const [disciplineToRemove, setDisciplineToRemove] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -597,7 +597,7 @@ export default function ProjectEstimation() {
                   <div
                     className="h-full bg-blue-500 transition-all duration-500"
                     style={{
-                      width: `${(['setup', 'team', 'equipment', 'deliverables', 'wbs', 'raci', 'costs', 'summary'].findIndex(s => s === currentStep) / 7) * 100}%`
+                      width: `${(['setup', 'deliverables', 'planning', 'organization', 'summary'].findIndex(s => s === currentStep) / 4) * 100}%`
                     }}
                   />
                 </div>
@@ -605,17 +605,14 @@ export default function ProjectEstimation() {
                 {/* Step Circles */}
                 {[
                   { key: 'setup', label: 'Setup' },
-                  { key: 'team', label: 'Team' },
-                  ...(useEquipmentMode ? [{ key: 'equipment', label: 'Equipment' }] : []),
                   { key: 'deliverables', label: 'Deliverables' },
-                  { key: 'wbs', label: 'WBS' },
-                  { key: 'raci', label: 'RACI' },
-                  { key: 'costs', label: 'Costs' },
+                  { key: 'planning', label: 'Planning' },
+                  { key: 'organization', label: 'Organization' },
                   { key: 'summary', label: 'Summary' },
                 ].map((step, index) => {
                   const isCurrent = currentStep === step.key;
                   const isCompleted = completedSteps.includes(step.key as EstimationStep);
-                  const allSteps = ['setup', 'team', ...(useEquipmentMode ? ['equipment'] : []), 'deliverables', 'wbs', 'raci', 'costs', 'summary'];
+                  const allSteps: EstimationStep[] = ['setup', 'deliverables', 'planning', 'organization', 'summary'];
                   const stepIndex = allSteps.findIndex(s => s === currentStep);
                   const isPast = index < stepIndex;
 
@@ -800,6 +797,38 @@ export default function ProjectEstimation() {
                       </select>
                     )}
                   </div>
+
+                  {/* Divider */}
+                  <div className="my-3 border-t border-gray-300"></div>
+
+                  {/* Equipment-Driven Mode Toggle */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Estimation Mode</label>
+                    <button
+                      onClick={() => {
+                        const enabled = !useEquipmentMode;
+                        if (!enabled) {
+                          // Always show confirmation when disabling
+                          setShowEquipmentDisableDialog(true);
+                        } else {
+                          setUseEquipmentMode(enabled);
+                        }
+                      }}
+                      className={`w-full flex items-center gap-2 p-2 rounded-lg border-2 cursor-pointer transition-all ${
+                        useEquipmentMode
+                          ? 'border-green-500 bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-md'
+                          : 'border-gray-300 bg-white hover:border-blue-400 hover:shadow'
+                      }`}
+                    >
+                      <span className="text-base">{useEquipmentMode ? '✓' : '⚙️'}</span>
+                      <span className={`text-xs font-medium flex-1 text-left ${
+                        useEquipmentMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        Equipment-Driven Selection: {useEquipmentMode ? 'ENABLED' : 'Off'}
+                      </span>
+                    </button>
+                  </div>
+
                 </div>
 
                 {/* Disciplines Selection */}
@@ -808,14 +837,14 @@ export default function ProjectEstimation() {
                     <h3 className="text-sm font-semibold">Disciplines</h3>
                     <button
                       onClick={() => {
-                        const allDisciplines = ['Civil', 'Structural', 'Mechanical', 'Electrical/Instrumentation', 'Process', 'Piping', 'Controls', 'Architecture'];
+                        const allDisciplines = ['Civil', 'Structural', 'Mechanical', 'Electrical', 'Instrumentation', 'Process', 'Piping', 'Survey', 'Controls', 'Architecture'];
                         setSelectedDisciplines(
                           selectedDisciplines.length === allDisciplines.length ? [] : allDisciplines
                         );
                       }}
                       className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
                     >
-                      {selectedDisciplines.length === 8 ? 'Deselect All' : 'Select All'}
+                      {selectedDisciplines.length === 10 ? 'Deselect All' : 'Select All'}
                     </button>
                   </div>
                   <div className="space-y-1">
@@ -823,9 +852,11 @@ export default function ProjectEstimation() {
                       { value: 'Civil', icon: '🏗️' },
                       { value: 'Structural', icon: '🏛️' },
                       { value: 'Mechanical', icon: '⚙️' },
-                      { value: 'Electrical/Instrumentation', icon: '⚡' },
+                      { value: 'Electrical', icon: '⚡' },
+                      { value: 'Instrumentation', icon: '🔌' },
                       { value: 'Process', icon: '🔧' },
                       { value: 'Piping', icon: '🔩' },
+                      { value: 'Survey', icon: '📐' },
                       { value: 'Controls', icon: '🎛️' },
                       { value: 'Architecture', icon: '🏢' },
                     ].map((discipline) => {
@@ -840,7 +871,9 @@ export default function ProjectEstimation() {
                                 setShowConfirmDialog(true);
                               }
                             } else {
-                              setSelectedDisciplines([...selectedDisciplines, discipline.value]);
+                              const newDisciplines = [...selectedDisciplines, discipline.value];
+                              console.log('Adding discipline:', discipline.value, 'New array:', newDisciplines);
+                              setSelectedDisciplines(newDisciplines);
                             }
                           }}
                           className={`w-full flex items-center gap-2 p-1.5 rounded-lg border-2 cursor-pointer transition-all ${
@@ -903,233 +936,30 @@ export default function ProjectEstimation() {
                   </div>
 
                   <div className="pt-2 border-t border-gray-200">
-                    <ComplexityFactors factors={complexityFactors} onChange={setComplexityFactors} />
+                    <ComplexityFactors
+                      factors={complexityFactors}
+                      onChange={setComplexityFactors}
+                      selectedDisciplines={selectedDisciplines}
+                    />
                   </div>
 
-                  <div className="pt-2 border-t border-gray-200">
-                    <h3 className="text-sm font-semibold mb-1.5">Actions</h3>
-                    <div className="space-y-1.5">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={autoCalculate}
-                          onChange={(e) => setAutoCalculate(e.target.checked)}
-                          className="h-3.5 w-3.5 text-blue-600"
-                        />
-                        <span className="ml-2 text-xs">Auto-calculate</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={useEquipmentMode}
-                          onChange={(e) => {
-                            const enabled = e.target.checked;
-                            setUseEquipmentMode(enabled);
-                            if (!enabled) {
-                              // Clear equipment when disabling
-                              setEquipmentList([]);
-                            }
-                          }}
-                          className="h-3.5 w-3.5 text-blue-600"
-                        />
-                        <span className="ml-2 text-xs">⚙️ Equipment-driven estimation</span>
-                      </label>
-                      {!autoCalculate && (
-                        <button
-                          onClick={calculateEstimation}
-                          className="w-full px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                          Calculate
-                        </button>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </div>
 
               {/* Navigation */}
               <div className="flex justify-end">
                 <button
-                  onClick={() => setCurrentStep('team')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                  Next: Team →
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Step 2: Team */}
-          {currentStep === 'team' && (
-            <>
-              <TeamBuilder
-                selectedDisciplines={selectedDisciplines}
-                projectSize={projectSize}
-                onTeamChange={setProjectTeam}
-                initialTeam={projectTeam}
-              />
-
-              {/* Navigation */}
-              <div className="flex justify-between mt-6">
-                <button
-                  onClick={() => setCurrentStep('setup')}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
-                >
-                  ← Back to Setup
-                </button>
-                <button
-                  onClick={() => setCurrentStep(useEquipmentMode ? 'equipment' : 'deliverables')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                  Next: {useEquipmentMode ? 'Equipment' : 'Deliverables'} →
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Step 2.5: Equipment (Optional - when equipment mode is enabled) */}
-          {currentStep === 'equipment' && (
-            <>
-              {!useEquipmentMode ? (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-center py-12">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Equipment Mode Disabled</h2>
-                    <p className="text-gray-600 mb-4">
-                      Equipment-driven estimation is not enabled. Please go back to Setup and enable it.
-                    </p>
-                    <button
-                      onClick={() => setCurrentStep('setup')}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                    >
-                      ← Back to Setup
-                    </button>
-                  </div>
-                </div>
-              ) : (
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Equipment List</h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Add equipment to auto-generate deliverables across disciplines
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowAddEquipmentModal(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
-                  >
-                    <span className="text-xl">+</span> Add Equipment
-                  </button>
-                </div>
-
-                {/* Equipment List */}
-                {equipmentList.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
-                    <div className="text-6xl mb-4">⚙️</div>
-                    <p className="text-gray-600 font-medium mb-2">No equipment added yet</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Add equipment to automatically generate deliverables
-                    </p>
-                    <button
-                      onClick={() => setShowAddEquipmentModal(true)}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                    >
-                      Add Your First Equipment
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {equipmentList.map((equipment) => {
-                      const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
-                      const sizeFactor = template.sizeFactors[equipment.size];
-                      const complexityFactor = template.complexityFactors[equipment.complexity];
-                      const totalHours = template.deliverables.reduce(
-                        (sum, d) => sum + Math.round(d.baseHours * sizeFactor * complexityFactor),
-                        0
-                      );
-
-                      return (
-                        <div
-                          key={equipment.id}
-                          className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="text-4xl">{template.icon}</div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <h3 className="text-lg font-bold text-gray-900">
-                                    {equipment.tag}
-                                  </h3>
-                                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
-                                    {template.type}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                                  <span className="capitalize">
-                                    Size: <strong>{equipment.size}</strong> ({sizeFactor}×)
-                                  </span>
-                                  <span className="capitalize">
-                                    Complexity: <strong>{equipment.complexity}</strong> ({complexityFactor}×)
-                                  </span>
-                                  <span className="text-blue-600 font-semibold">
-                                    {totalHours}h total
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Generates {template.deliverables.length} deliverables across{' '}
-                                  {new Set(template.deliverables.map(d => d.discipline)).size} disciplines
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Remove ${equipment.tag}? This will delete all associated deliverables.`)) {
-                                  setEquipmentList(equipmentList.filter(e => e.id !== equipment.id));
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-800 text-sm font-semibold"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-bold text-gray-900">Total Equipment: {equipmentList.length}</h3>
-                          <p className="text-sm text-gray-600">
-                            Will generate {deliverables.length} deliverables • {deliverablesTotal}h estimated
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              )}
-
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep('team')}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
-                >
-                  ← Back to Team
-                </button>
-                <button
                   onClick={() => setCurrentStep('deliverables')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                  disabled={useEquipmentMode && equipmentList.length === 0}
                 >
-                  Next: Review Deliverables →
+                  Next: Deliverables →
                 </button>
               </div>
             </>
           )}
+
+          {/* REMOVED: Old Step 2: Team - Now integrated into Planning step (PlanningHub component) */}
+          {/* REMOVED: Old Step 2.5: Equipment - Now integrated into Setup step */}
 
           {/* Step 3: Deliverables */}
           {currentStep === 'deliverables' && (
@@ -1519,119 +1349,85 @@ export default function ProjectEstimation() {
                   ← Back to {useEquipmentMode ? 'Equipment' : 'Setup'}
                 </button>
                 <button
-                  onClick={() => setCurrentStep('resources')}
+                  onClick={() => setCurrentStep('planning')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                 >
-                  Next: Resource Planning →
+                  Next: Planning →
                 </button>
               </div>
             </>
           )}
 
-          {/* Step: Resources */}
-          {currentStep === 'resources' && (
+          {/* NEW Step 3: Planning (Resources + Team + Costs) */}
+          {currentStep === 'planning' && (
             <>
-              <div className="bg-white rounded-lg shadow p-6">
-                <ResourcePlanning
-                  deliverables={deliverables}
-                  totalHours={deliverablesTotal}
-                  durationWeeks={project?.duration_weeks || 12}
-                />
-              </div>
+              <PlanningHub
+                deliverables={deliverables}
+                totalHours={deliverablesTotal}
+                durationWeeks={project?.duration_weeks || 12}
+                projectTeam={projectTeam}
+                onTeamChange={setProjectTeam}
+                selectedCompanyId={selectedCompanyId}
+                selectedRateSheetId={selectedRateSheetId}
+                costData={costData}
+                costLoading={costLoading}
+                onCalculateCosts={calculateCosts}
+                selectedDisciplines={selectedDisciplines}
+                projectSize={projectSize}
+              />
 
               {/* Navigation */}
-              <div className="flex justify-between">
+              <div className="flex justify-between mt-6">
                 <button
                   onClick={() => setCurrentStep('deliverables')}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
                 >
                   ← Back to Deliverables
                 </button>
-                <button
-                  onClick={() => setCurrentStep('wbs')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                  Next: Work Breakdown →
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep('summary')}
+                    className="px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-semibold"
+                  >
+                    Skip to Summary →
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep('organization')}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                  >
+                    Next: Work Organization →
+                  </button>
+                </div>
               </div>
             </>
           )}
 
-          {/* Step 3: WBS */}
-          {currentStep === 'wbs' && (
+          {/* NEW Step 4: Organization (WBS + RACI) */}
+          {currentStep === 'organization' && (
             <>
-              <div className="bg-white rounded-lg shadow p-6">
-                <WBS deliverables={deliverables} />
-              </div>
+              <WorkOrganization
+                deliverables={deliverables}
+                projectTeam={projectTeam}
+              />
 
               {/* Navigation */}
-              <div className="flex justify-between">
+              <div className="flex justify-between mt-6">
                 <button
-                  onClick={() => setCurrentStep('resources')}
+                  onClick={() => setCurrentStep('planning')}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  ← Back to Resources
-                </button>
-                <button
-                  onClick={() => setCurrentStep('raci')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                  Next: RACI Matrix →
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Step 4: RACI */}
-          {currentStep === 'raci' && (
-            <>
-              <div className="bg-white rounded-lg shadow p-6">
-                <RACIMatrix
-                  deliverables={deliverables}
-                  projectTeam={projectTeam.map(m => m.role)}
-                />
-              </div>
-
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep('wbs')}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
-                >
-                  ← Back to WBS
-                </button>
-                <button
-                  onClick={() => setCurrentStep('costs')}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                >
-                  Next: Cost Analysis →
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Step 5: Costs */}
-          {currentStep === 'costs' && (
-            <>
-              <CostBreakdown costData={costData} loading={costLoading} />
-
-              {/* Navigation */}
-              <div className="flex justify-between">
-                <button
-                  onClick={() => setCurrentStep('raci')}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
-                >
-                  ← Back to RACI
+                  ← Back to Planning
                 </button>
                 <button
                   onClick={() => setCurrentStep('summary')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                 >
-                  View Summary →
+                  Next: Summary →
                 </button>
               </div>
             </>
           )}
+
 
           {/* Step 6: Summary */}
           {currentStep === 'summary' && (
@@ -1646,10 +1442,10 @@ export default function ProjectEstimation() {
               {/* Navigation */}
               <div className="flex justify-start">
                 <button
-                  onClick={() => setCurrentStep('costs')}
+                  onClick={() => setCurrentStep('organization')}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  ← Back to Costs
+                  ← Back to Organization
                 </button>
               </div>
             </>
@@ -1720,7 +1516,7 @@ export default function ProjectEstimation() {
           />
         )}
 
-        {/* Confirmation Dialog */}
+        {/* Confirmation Dialog - Remove Discipline */}
         <ConfirmDialog
           isOpen={showConfirmDialog}
           title="Remove Discipline"
@@ -1735,6 +1531,23 @@ export default function ProjectEstimation() {
           onCancel={() => {
             setShowConfirmDialog(false);
             setDisciplineToRemove(null);
+          }}
+        />
+
+        {/* Confirmation Dialog - Disable Equipment Mode */}
+        <ConfirmDialog
+          isOpen={showEquipmentDisableDialog}
+          title="Disable Equipment-Driven Mode"
+          message={equipmentList.length > 0
+            ? `Disabling equipment-driven mode will remove all ${equipmentList.length} equipment items and their generated deliverables. Are you sure you want to continue?`
+            : "Are you sure you want to disable equipment-driven mode? Any equipment data will be cleared."}
+          onConfirm={() => {
+            setUseEquipmentMode(false);
+            setEquipmentList([]);
+            setShowEquipmentDisableDialog(false);
+          }}
+          onCancel={() => {
+            setShowEquipmentDisableDialog(false);
           }}
         />
       </div>

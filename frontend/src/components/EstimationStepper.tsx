@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type EstimationStep = 'setup' | 'team' | 'equipment' | 'deliverables' | 'resources' | 'wbs' | 'raci' | 'costs' | 'summary';
+export type EstimationStep = 'setup' | 'deliverables' | 'planning' | 'organization' | 'summary';
 
 interface Step {
   id: EstimationStep;
@@ -9,15 +9,11 @@ interface Step {
 }
 
 const steps: Step[] = [
-  { id: 'setup', name: 'Setup', description: 'Project configuration' },
-  { id: 'team', name: 'Team', description: 'Build project team' },
-  { id: 'equipment', name: 'Equipment', description: 'Equipment list (optional)' },
-  { id: 'deliverables', name: 'Deliverables', description: 'Select deliverables' },
-  { id: 'resources', name: 'Resources', description: 'Team planning & FTE' },
-  { id: 'wbs', name: 'Work Breakdown', description: 'Structure & tasks' },
-  { id: 'raci', name: 'RACI', description: 'Role assignments' },
-  { id: 'costs', name: 'Cost Analysis', description: 'Breakdown & summary' },
-  { id: 'summary', name: 'Summary', description: 'Final estimation' },
+  { id: 'setup', name: 'Project Setup', description: 'Configuration & equipment' },
+  { id: 'deliverables', name: 'Deliverables', description: 'Configure work scope' },
+  { id: 'planning', name: 'Resource Planning', description: 'Team, FTE & costs' },
+  { id: 'organization', name: 'Work Organization', description: 'WBS & RACI (optional)' },
+  { id: 'summary', name: 'Summary', description: 'Final review & export' },
 ];
 
 interface EstimationStepperProps {

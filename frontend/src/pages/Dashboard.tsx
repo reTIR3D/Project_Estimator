@@ -103,6 +103,14 @@ export default function Dashboard() {
 
     // Apply sorting
     filtered.sort((a, b) => {
+      // Always put Refinery projects at the top
+      const aIsRefinery = a.name.toLowerCase().includes('refinery');
+      const bIsRefinery = b.name.toLowerCase().includes('refinery');
+
+      if (aIsRefinery && !bIsRefinery) return -1;
+      if (!aIsRefinery && bIsRefinery) return 1;
+
+      // Then apply normal sorting
       switch (sortBy) {
         case 'name_asc':
           return a.name.localeCompare(b.name);
@@ -346,17 +354,25 @@ export default function Dashboard() {
 
               const cardStyle = getCardStyle();
 
+              // Only allow projects with "Refinery" in the name to be clickable
+              const isActiveProject = project.name.toLowerCase().includes('refinery');
+
               return (
                 <div
                   key={project.id}
                   onClick={() => {
+                    if (!isActiveProject) return;
                     if (project.work_type === 'CAMPAIGN') {
                       navigate(`/campaign/${project.id}`);
                     } else {
                       navigate(`/project/${project.id}`);
                     }
                   }}
-                  className={`${cardStyle.bg} ${cardStyle.border} rounded-lg shadow hover:shadow-lg transition-all cursor-pointer p-4 relative overflow-hidden`}
+                  className={`${cardStyle.bg} ${cardStyle.border} rounded-lg shadow transition-all p-4 relative overflow-hidden ${
+                    isActiveProject
+                      ? 'cursor-pointer hover:shadow-lg'
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
                   {/* Large icon badge - watermark */}
                   <div className="absolute top-2 right-4 text-6xl opacity-10">
@@ -375,6 +391,11 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-bold text-gray-900 truncate">{project.name}</h3>
+                        {isActiveProject && (
+                          <span className="px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0 bg-green-500 text-white">
+                            🎯 ACTIVE FOCUS
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0 ${getStatusColor(
                             project.status
