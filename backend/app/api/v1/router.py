@@ -14,6 +14,7 @@ from app.api.v1.endpoints import (
     rate_sheets,
     deliverable_templates,
     project_size_settings,
+    resource_planning,
 )
 
 # Force reload
@@ -36,3 +37,4 @@ api_router.include_router(companies.router, prefix="/companies", tags=["Companie
 api_router.include_router(rate_sheets.router, prefix="/rate-sheets", tags=["Rate Sheets"])
 api_router.include_router(deliverable_templates.router, prefix="/deliverable-templates", tags=["Deliverable Templates"])
 api_router.include_router(project_size_settings.router, prefix="/project-size-settings", tags=["Project Size Settings"])
+api_router.include_router(resource_planning.router, prefix="/resource-planning", tags=["Resource Planning"])

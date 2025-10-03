@@ -13,6 +13,7 @@ import TeamBuilder, { TeamMember } from '../components/TeamBuilder';
 import AddEquipmentModal from '../components/AddEquipmentModal';
 import AddDeliverableModal from '../components/AddDeliverableModal';
 import DeliverableConfigModal from '../components/DeliverableConfigModal';
+import ResourcePlanning from '../components/ResourcePlanning';
 import type {
   ProjectSize,
   ClientProfile,
@@ -1518,6 +1519,35 @@ export default function ProjectEstimation() {
                   ← Back to {useEquipmentMode ? 'Equipment' : 'Setup'}
                 </button>
                 <button
+                  onClick={() => setCurrentStep('resources')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                  Next: Resource Planning →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step: Resources */}
+          {currentStep === 'resources' && (
+            <>
+              <div className="bg-white rounded-lg shadow p-6">
+                <ResourcePlanning
+                  deliverables={deliverables}
+                  totalHours={deliverablesTotal}
+                  durationWeeks={project?.duration_weeks || 12}
+                />
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setCurrentStep('deliverables')}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+                >
+                  ← Back to Deliverables
+                </button>
+                <button
                   onClick={() => setCurrentStep('wbs')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                 >
@@ -1537,10 +1567,10 @@ export default function ProjectEstimation() {
               {/* Navigation */}
               <div className="flex justify-between">
                 <button
-                  onClick={() => setCurrentStep('team')}
+                  onClick={() => setCurrentStep('resources')}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
                 >
-                  ← Back to Team
+                  ← Back to Resources
                 </button>
                 <button
                   onClick={() => setCurrentStep('raci')}
