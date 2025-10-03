@@ -2,17 +2,19 @@ version: '3.8'
 
 services:
   # PostgreSQL Database
-  postgres:
+  postgres_beetz:
+    networks:
+      - beetz_network
     image: postgres:15-alpine
-    container_name: estimation_postgres
+    container_name: estimation_postgres_beetz
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: estimation_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_beetz:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d estimation_db"]
       interval: 10s
@@ -20,13 +22,15 @@ services:
       retries: 5
 
   # Redis Cache
-  redis:
+  redis_beetz:
+    networks:
+      - beetz_network
     image: redis:7-alpine
-    container_name: estimation_redis
+    container_name: estimation_redis_beetz
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
-      - redis_data:/data
+      - redis_data_beetz:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -34,26 +38,32 @@ services:
       retries: 5
 
   # FastAPI Application
-  api:
+  api_beetz:
+    networks:
+      - beetz_network
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: estimation_api
+    container_name: estimation_api_beetz
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./app:/app/app
     environment:
       - APP_ENV=development
-      - DATABASE_URL=postgresql+asyncpg://user:password@postgres:5432/estimation_db
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://user:password@postgres_beetz:5432/estimation_db
+      - REDIS_URL=redis://redis_beetz:6379/0
     depends_on:
-      postgres:
+      postgres_beetz:
         condition: service_healthy
-      redis:
+      redis_beetz:
         condition: service_healthy
 
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_data_beetz:
+  redis_data_beetz:
+networks:
+  beetz_network:
+    name: beetz_network
+
