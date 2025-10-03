@@ -136,3 +136,51 @@ git merge origin/master
 # Resolve any conflicts
 git push origin beetz
 ```
+
+## Quick View Teammate's Work
+
+The fastest way to see what your teammates are working on without interrupting your own work:
+
+### Using the Pull-and-View Script
+
+**For Beetz Branch:**
+```bash
+# Just double-click or run:
+pull-and-view-beetz.bat
+```
+
+This script automatically:
+1. Shows current git status
+2. Pulls latest changes from origin/beetz
+3. Shows what changed (last 5 commits)
+4. Opens http://localhost:3001 in your browser (if beetz is running)
+
+**Visual Confirmation:**
+- **Beetz version** shows a purple banner at the top: "🎯 BEETZ BRANCH - Testing Live Updates! 🚀"
+- **Master version** has no banner
+- You can have both open in different browser tabs for instant comparison
+
+### Quick Start Both Environments
+
+**Terminal 1 - Master:**
+```bash
+cd F:/CC/Projects/Project_Estimator
+# Backend
+cd backend && python -m uvicorn app.main:app --reload
+# Frontend (new terminal)
+cd frontend && npm run dev
+```
+
+**Terminal 2 - Beetz:**
+```bash
+cd F:/CC/Projects/Project_Estimator_beetz
+# Backend
+cd backend && python -m uvicorn app.main:app --reload --port 8001
+# Frontend (new terminal)
+cd frontend && npm run dev
+```
+
+**Access:**
+- Master: http://localhost:3000 → Backend: http://localhost:8000
+- Beetz: http://localhost:3001 → Backend: http://localhost:8001
+
