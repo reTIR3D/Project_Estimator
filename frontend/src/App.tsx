@@ -20,6 +20,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-4 text-center font-bold text-lg shadow-lg">
+          🎯 BEETZ BRANCH - Testing Live Updates! 🚀
+        </div>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
