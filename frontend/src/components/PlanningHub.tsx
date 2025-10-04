@@ -16,6 +16,8 @@ interface PlanningHubProps {
   costData: any;
   costLoading: boolean;
   onCalculateCosts: () => void;
+  selectedDisciplines: string[];
+  projectSize: string;
 }
 
 export default function PlanningHub({
@@ -28,7 +30,9 @@ export default function PlanningHub({
   selectedRateSheetId,
   costData,
   costLoading,
-  onCalculateCosts
+  onCalculateCosts,
+  selectedDisciplines,
+  projectSize
 }: PlanningHubProps) {
   const [activeTab, setActiveTab] = useState<PlanningTab>('resources');
 
@@ -92,8 +96,10 @@ export default function PlanningHub({
                 </p>
               </div>
               <TeamBuilder
-                team={projectTeam}
-                onChange={onTeamChange}
+                selectedDisciplines={selectedDisciplines}
+                projectSize={projectSize}
+                onTeamChange={onTeamChange}
+                initialTeam={projectTeam}
               />
             </div>
           )}

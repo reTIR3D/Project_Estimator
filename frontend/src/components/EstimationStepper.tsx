@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type EstimationStep = 'setup' | 'deliverables' | 'planning' | 'organization' | 'summary';
+export type EstimationStep = 'setup' | 'equipment' | 'deliverables' | 'planning' | 'organization' | 'summary';
 
 interface Step {
   id: EstimationStep;
@@ -8,7 +8,7 @@ interface Step {
   description: string;
 }
 
-const steps: Step[] = [
+const baseSteps: Step[] = [
   { id: 'setup', name: 'Project Setup', description: 'Configuration & equipment' },
   { id: 'deliverables', name: 'Deliverables', description: 'Configure work scope' },
   { id: 'planning', name: 'Resource Planning', description: 'Team, FTE & costs' },
@@ -16,13 +16,25 @@ const steps: Step[] = [
   { id: 'summary', name: 'Summary', description: 'Final review & export' },
 ];
 
+const equipmentStep: Step = {
+  id: 'equipment',
+  name: 'Equipment',
+  description: 'Add equipment items'
+};
+
 interface EstimationStepperProps {
   currentStep: EstimationStep;
   onStepChange: (step: EstimationStep) => void;
   completedSteps?: EstimationStep[];
+  showEquipmentStep?: boolean;
 }
 
-export default function EstimationStepper({ currentStep, onStepChange, completedSteps = [] }: EstimationStepperProps) {
+export default function EstimationStepper({ currentStep, onStepChange, completedSteps = [], showEquipmentStep = false }: EstimationStepperProps) {
+  // Conditionally insert equipment step after setup
+  const steps = showEquipmentStep
+    ? [baseSteps[0], equipmentStep, ...baseSteps.slice(1)]
+    : baseSteps;
+
   const currentIndex = steps.findIndex(s => s.id === currentStep);
 
   return (

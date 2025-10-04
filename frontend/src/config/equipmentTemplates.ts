@@ -3,7 +3,7 @@ import { EquipmentTemplate, EquipmentTemplateKey } from '../types';
 export const EQUIPMENT_TEMPLATES: Record<EquipmentTemplateKey, EquipmentTemplate> = {
   vessel: {
     type: 'Pressure Vessel',
-    icon: '⚗️',
+    icon: '🫙',
     deliverables: [
       { name: 'Process Datasheet', discipline: 'Process', baseHours: 16 },
       { name: 'Mechanical Datasheet', discipline: 'Mechanical', baseHours: 12 },
@@ -45,6 +45,30 @@ export const EQUIPMENT_TEMPLATES: Record<EquipmentTemplateKey, EquipmentTemplate
       small: 0.7,
       medium: 1.0,
       large: 1.2,
+    },
+  },
+
+  pd_pump: {
+    type: 'Pos. Displ. Pump',
+    icon: '⚙️',
+    deliverables: [
+      { name: 'Process Datasheet', discipline: 'Process', baseHours: 14 },
+      { name: 'Mechanical Datasheet', discipline: 'Mechanical', baseHours: 12 },
+      { name: 'Performance Calculations', discipline: 'Mechanical', baseHours: 10 },
+      { name: 'Foundation Design', discipline: 'Civil', baseHours: 18 },
+      { name: 'Motor Specification', discipline: 'Electrical/Instrumentation', baseHours: 6 },
+      { name: 'Control System Integration', discipline: 'Electrical/Instrumentation', baseHours: 10 },
+      { name: 'Relief Valve Sizing', discipline: 'Safety', baseHours: 6 },
+    ],
+    complexityFactors: {
+      simple: 0.8,
+      standard: 1.0,
+      complex: 1.4,
+    },
+    sizeFactors: {
+      small: 0.7,
+      medium: 1.0,
+      large: 1.3,
     },
   },
 
@@ -115,6 +139,31 @@ export const EQUIPMENT_TEMPLATES: Record<EquipmentTemplateKey, EquipmentTemplate
       small: 0.8,
       medium: 1.0,
       large: 1.4,
+    },
+  },
+
+  tower: {
+    type: 'Tower/Column',
+    icon: '🏭',
+    deliverables: [
+      { name: 'Process Datasheet', discipline: 'Process', baseHours: 20 },
+      { name: 'Tray/Packing Design', discipline: 'Process', baseHours: 32 },
+      { name: 'Hydraulic Calculations', discipline: 'Process', baseHours: 24 },
+      { name: 'Mechanical Datasheet', discipline: 'Mechanical', baseHours: 16 },
+      { name: 'Vessel Design Calculations', discipline: 'Mechanical', baseHours: 28 },
+      { name: 'Nozzle Orientation', discipline: 'Mechanical', baseHours: 12 },
+      { name: 'Foundation Design', discipline: 'Civil', baseHours: 32 },
+      { name: 'Instrumentation Hookup', discipline: 'Electrical/Instrumentation', baseHours: 10 },
+    ],
+    complexityFactors: {
+      simple: 0.8,
+      standard: 1.0,
+      complex: 1.6,
+    },
+    sizeFactors: {
+      small: 0.7,
+      medium: 1.0,
+      large: 1.5,
     },
   },
 };

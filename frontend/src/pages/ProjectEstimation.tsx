@@ -336,23 +336,34 @@ export default function ProjectEstimation() {
     const generatedDeliverables: any[] = [];
 
     equipmentList.forEach((equipment) => {
-      const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
-      const sizeFactor = template.sizeFactors[equipment.size];
-      const complexityFactor = template.complexityFactors[equipment.complexity];
+      // Get the subtype deliverables based on scope
+      const { EQUIPMENT_SUBTYPES } = require('../config/equipmentSubtypes');
+      const subtypes = EQUIPMENT_SUBTYPES[equipment.templateKey] || [];
+      const subtype = subtypes.find((s: any) => s.id === equipment.subtypeId);
 
-      template.deliverables.forEach((delivTemplate) => {
-        const baseHours = Math.round(
-          delivTemplate.baseHours * sizeFactor * complexityFactor
-        );
+      if (!subtype) {
+        console.warn(`No subtype found for equipment ${equipment.tag}`);
+        return;
+      }
 
+      // Get deliverables for the selected scope (basic/typical/complex)
+      const scopeDeliverables = subtype.deliverables[equipment.scope] || [];
+
+      // Filter deliverables if custom selection exists
+      const deliverablestoGenerate = equipment.customDeliverables && equipment.customDeliverables.length > 0
+        ? scopeDeliverables.filter((d: any) => equipment.customDeliverables!.includes(d.name))
+        : scopeDeliverables;
+
+      // Generate base equipment deliverables from scope
+      deliverablestoGenerate.forEach((delivTemplate: any) => {
         generatedDeliverables.push({
           id: `deliv-${equipment.id}-${delivTemplate.name.replace(/\s+/g, '-')}`,
           name: delivTemplate.name,
           discipline: delivTemplate.discipline,
           equipment_tag: equipment.tag,
           equipment_id: equipment.id,
-          base_hours: baseHours,
-          adjusted_hours: baseHours,
+          base_hours: delivTemplate.hours,
+          adjusted_hours: delivTemplate.hours,
           status: 'Not Started',
           dependencies: [],
           issue_states: ['IFR', 'IFC'],
@@ -360,6 +371,34 @@ export default function ProjectEstimation() {
           rework_factor: 25,
         });
       });
+
+      // Generate deliverables from selected packages
+      if (equipment.selectedPackages && equipment.selectedPackages.length > 0) {
+        const { DISCIPLINE_PACKAGES } = require('../config/disciplinePackages');
+
+        equipment.selectedPackages.forEach((packageId) => {
+          const pkg = DISCIPLINE_PACKAGES.find((p: any) => p.id === packageId);
+          if (pkg) {
+            pkg.deliverables.forEach((delivTemplate: any) => {
+              generatedDeliverables.push({
+                id: `deliv-${equipment.id}-pkg-${packageId}-${delivTemplate.name.replace(/\s+/g, '-')}`,
+                name: delivTemplate.name,
+                discipline: 'Multi', // Package deliverables span multiple disciplines
+                equipment_tag: equipment.tag,
+                equipment_id: equipment.id,
+                base_hours: delivTemplate.baseHours,
+                adjusted_hours: delivTemplate.baseHours,
+                status: 'Not Started',
+                dependencies: [],
+                issue_states: ['IFR', 'IFC'],
+                review_cycles: 1,
+                rework_factor: 25,
+                package_id: packageId, // Track which package this came from
+              });
+            });
+          }
+        });
+      }
     });
 
     // Auto-apply dependency rules
@@ -597,7 +636,11 @@ export default function ProjectEstimation() {
                   <div
                     className="h-full bg-blue-500 transition-all duration-500"
                     style={{
-                      width: `${(['setup', 'deliverables', 'planning', 'organization', 'summary'].findIndex(s => s === currentStep) / 4) * 100}%`
+                      width: `${(
+                        useEquipmentMode
+                          ? ['setup', 'equipment', 'deliverables', 'planning', 'organization', 'summary'].findIndex(s => s === currentStep) / 5
+                          : ['setup', 'deliverables', 'planning', 'organization', 'summary'].findIndex(s => s === currentStep) / 4
+                      ) * 100}%`
                     }}
                   />
                 </div>
@@ -605,6 +648,7 @@ export default function ProjectEstimation() {
                 {/* Step Circles */}
                 {[
                   { key: 'setup', label: 'Setup' },
+                  ...(useEquipmentMode ? [{ key: 'equipment', label: 'Equipment' }] : []),
                   { key: 'deliverables', label: 'Deliverables' },
                   { key: 'planning', label: 'Planning' },
                   { key: 'organization', label: 'Organization' },
@@ -734,6 +778,7 @@ export default function ProjectEstimation() {
           currentStep={currentStep}
           onStepChange={setCurrentStep}
           completedSteps={completedSteps}
+          showEquipmentStep={useEquipmentMode}
         />
 
         {/* Step Content */}
@@ -949,17 +994,140 @@ export default function ProjectEstimation() {
               {/* Navigation */}
               <div className="flex justify-end">
                 <button
-                  onClick={() => setCurrentStep('deliverables')}
+                  onClick={() => setCurrentStep(useEquipmentMode ? 'equipment' : 'deliverables')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
                 >
-                  Next: Deliverables →
+                  Next: {useEquipmentMode ? 'Equipment' : 'Deliverables'} →
                 </button>
               </div>
             </>
           )}
 
-          {/* REMOVED: Old Step 2: Team - Now integrated into Planning step (PlanningHub component) */}
-          {/* REMOVED: Old Step 2.5: Equipment - Now integrated into Setup step */}
+          {/* Step 2: Equipment (conditional - only when equipment mode enabled) */}
+          {currentStep === 'equipment' && (
+            <>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Equipment List</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Add equipment to auto-generate deliverables across disciplines
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddEquipmentModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
+                  >
+                    <span className="text-xl">+</span> Add Equipment
+                  </button>
+                </div>
+
+                {/* Equipment List */}
+                {equipmentList.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                    <div className="text-6xl mb-4">⚙️</div>
+                    <p className="text-gray-600 font-medium mb-2">No equipment added yet</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Add equipment to automatically generate deliverables
+                    </p>
+                    <button
+                      onClick={() => setShowAddEquipmentModal(true)}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      Add Your First Equipment
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {equipmentList.map((equipment) => {
+                      const template = EQUIPMENT_TEMPLATES[equipment.templateKey];
+                      const sizeFactor = template.sizeFactors[equipment.size];
+                      const complexityFactor = template.complexityFactors[equipment.complexity];
+                      const totalHours = template.deliverables.reduce(
+                        (sum, d) => sum + Math.round(d.baseHours * sizeFactor * complexityFactor),
+                        0
+                      );
+
+                      return (
+                        <div
+                          key={equipment.id}
+                          className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="text-4xl">{template.icon}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <h3 className="text-lg font-bold text-gray-900">
+                                    {equipment.tag}
+                                  </h3>
+                                  <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                                    {template.type}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                                  <span className="capitalize">
+                                    Size: <strong>{equipment.size}</strong> ({sizeFactor}×)
+                                  </span>
+                                  <span className="capitalize">
+                                    Complexity: <strong>{equipment.complexity}</strong> ({complexityFactor}×)
+                                  </span>
+                                  <span className="text-blue-600 font-semibold">
+                                    {totalHours}h total
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Generates {template.deliverables.length} deliverables across{' '}
+                                  {new Set(template.deliverables.map(d => d.discipline)).size} disciplines
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove ${equipment.tag}? This will delete all associated deliverables.`)) {
+                                  setEquipmentList(equipmentList.filter(e => e.id !== equipment.id));
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-800 text-sm font-semibold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-bold text-gray-900">Total Equipment: {equipmentList.length}</h3>
+                          <p className="text-sm text-gray-600">
+                            Will generate {deliverables.length} deliverables • {deliverablesTotal}h estimated
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Navigation */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setCurrentStep('setup')}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+                >
+                  ← Back to Setup
+                </button>
+                <button
+                  onClick={() => setCurrentStep('deliverables')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                >
+                  Next: Review Deliverables →
+                </button>
+              </div>
+            </>
+          )}
 
           {/* Step 3: Deliverables */}
           {currentStep === 'deliverables' && (

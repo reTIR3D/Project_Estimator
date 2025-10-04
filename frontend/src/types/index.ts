@@ -343,17 +343,19 @@ export interface RateSheetClone {
 }
 
 // Equipment-Driven Estimation Types
-export type EquipmentSize = 'small' | 'medium' | 'large';
-export type EquipmentComplexity = 'simple' | 'standard' | 'complex';
-export type EquipmentTemplateKey = 'vessel' | 'pump' | 'heat_exchanger' | 'tank' | 'compressor';
+export type EquipmentScope = 'basic' | 'typical' | 'complex';
+export type EquipmentTemplateKey = 'vessel' | 'pump' | 'pd_pump' | 'heat_exchanger' | 'tank' | 'compressor' | 'tower';
 export type IssueState = 'IFD' | 'IFR' | 'IFA' | 'IFB' | 'IFC' | 'IFI' | 'IFP' | 'IFM';
 
 export interface Equipment {
   id: string;
-  tag: string; // e.g., V-101, P-205A
+  tag: string; // e.g., V-101, P-205A, or V-[Feed-Gas-Separator]
+  description?: string; // e.g., "Feed Gas Separator" - meaningful name
   templateKey: EquipmentTemplateKey;
-  size: EquipmentSize;
-  complexity: EquipmentComplexity;
+  subtypeId?: string; // e.g., 'separator_2phase'
+  scope: EquipmentScope; // Determines deliverable set: basic, typical, or complex
+  selectedPackages?: string[]; // IDs of discipline packages selected
+  customDeliverables?: string[]; // If set, only these deliverables from scope are included
 }
 
 export interface EquipmentDeliverableTemplate {

@@ -31,7 +31,12 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git log:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(awk:*)",
+      "Bash(cat:*)",
+      "Bash(if exist node_modules.vite rmdir /s /q node_modules.vite)",
+      "Bash(start http://localhost:3000)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
